@@ -1,9 +1,14 @@
 # treematching
 
-Allow you to match any python tree hiearchy with python matching objects.
+Using natural python reflixivity, all python data structures could be seen as trees of python objects.
 
-An EDSL (Embedded Domain Specific Language) in python provide you some objects (Type, Attrs, List, Dict, ...) and you write a pattern
-with it to match python data.
+The module **treematching** allow you to write patterns to match subtrees in any trees of python objects.
+
+This could be usefull for trees coming from parsing (AST) but in a more common ways, from any trees coming from anywhere (JSON, DB, ...).
+
+**treematching** provide you some objects (Type, Attrs, List, Dict, ...) to write your patterns.
+
+For example:
 
 ```python
 bt = Type('A',
