@@ -1,3 +1,9 @@
+"""
+    MatchContext...
+
+    Objects for handles states during pattern matching...
+"""
+
 from enum import IntEnum
 from treematching.debug import *
 
@@ -38,6 +44,14 @@ class MatchContext:
         if not hasattr(self, 'capture'):
             log("create capture")
             self.capture = {}
+            # for searching fixpoint
+            self.nb_modif = 0
+
+    def init_event(self):
+        if not hasattr(self, 'event'):
+            log("create event")
+            self.event = set()
+            self.to_del_event = set()
 
     def init_state(self, oth):
         if not hasattr(self, 'type'):

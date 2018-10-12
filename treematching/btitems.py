@@ -1,43 +1,90 @@
+"""
+    Behavior Tree Items...
+
+    All what you need to construct your patterns...
+"""
+
 from treematching.matchcontext import *
+from treematching.conditions import Condition
 from treematching.debug import *
 
 class BTItem:
+    """
+    Base class for all items of a pattern
+    """
     def do(self, data, ctx) -> State:
         raise RuntimeError("must be implemented")
 
 class Expr(BTItem):
+    """
+    Pattern that took one argument
+    """
     def __init__(self, expr=None):
         self.expr = expr
 
 class Pair(BTItem):
+    """
+    Pattern that took two argument
+    """
     def __init__(self, first, second=None):
         self.first = first
         self.second = second
 
 class Component(BTItem):
+    """
+    Pattern that took many argument
+    """
     def __init__(self, *subs):
         self.subs = subs
 
 ##########
 
 class Capture(Pair):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         root = ctx.getroot()
         root.init_capture()
         ctx.init_second()
         res = self.second.do(data, ctx.second)
         if res != State.SUCCESS:
             return ctx.set_res(res)
-        log("CAPTURE %s" % data[Pos.ARG])
+        log("CAPTURE %s" % self.first)
         root.capture[self.first] = data[Pos.ARG]
         return ctx.set_res(State.SUCCESS)
+
+class Hook(Pair):
+    def do(self, data, ctx) -> State:
+        root = ctx.getroot()
+        root.init_capture()
+        ctx.init_second()
+        res = self.second.do(data, ctx.second)
+        if res != State.SUCCESS:
+            return ctx.set_res(res)
+        log("HOOK %s" % self.first)
+        ## hook must return if a modification was done in the hook -> fixpoint
+        if self.first(root.capture):
+            root.nb_modif += 1
+        return ctx.set_res(State.SUCCESS)
+
+class Event(Pair):
+    def do(self, data, ctx) -> State:
+        root = ctx.getroot()
+        root.init_event()
+        ctx.init_second()
+        res = self.second.do(data, ctx.second)
+        if res != State.SUCCESS:
+            return ctx.set_res(res)
+        log("EVENT %s" % self.first)
+        root.event |= {self.first}
+        return ctx.set_res(State.SUCCESS)
+
+##########
 
 class Dict(Component):
     def __init__(self, *subs, strict=True):
         Component.__init__(self, *subs)
         self.strict = strict
 
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("DICT %s" % ctx.state)
         if ctx.state == 'enter':
@@ -78,7 +125,7 @@ class Dict(Component):
             return ctx.set_res(State.RUNNING)
 
 class Key(Pair):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("KEY %s" % ctx.state)
         if ctx.state == 'enter':
@@ -97,7 +144,7 @@ class Key(Pair):
             return ctx.set_res(State.FAILED)
 
 class AnyKey(Expr):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("ANYKEY %s" % ctx.state)
         if ctx.state == 'enter':
@@ -121,7 +168,7 @@ class List(Component):
         Component.__init__(self, *subs)
         self.strict = strict
 
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("LIST %s %s" % (ctx.state, data[Pos.TYPE]))
         if ctx.state == 'enter':
@@ -163,7 +210,7 @@ class List(Component):
             return ctx.set_res(State.RUNNING)
 
 class Idx(Pair):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("IDX %s" % ctx.state)
         if ctx.state == 'enter':
@@ -182,7 +229,7 @@ class Idx(Pair):
             return ctx.set_res(State.FAILED)
 
 class AnyIdx(Expr):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("ANYIDX %s" % ctx.state)
         if ctx.state == 'enter':
@@ -206,7 +253,7 @@ class Attrs(Component):
         Component.__init__(self, *subs)
         self.strict = strict
 
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("ATTRSUN %s" % ctx.state)
         if ctx.state == 'enter':
@@ -247,7 +294,7 @@ class Attrs(Component):
             return ctx.set_res(State.RUNNING)
 
 class Attr(Pair):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("ATTR %s" % ctx.state)
         if ctx.state == 'enter':
@@ -267,7 +314,7 @@ class Attr(Pair):
             return ctx.set_res(State.FAILED)
 
 class AnyAttr(Expr):
-    def do(self, data, ctx):
+    def do(self, data, ctx) -> State:
         ctx.init_state(self)
         log("ANYATTR %s" % ctx.state)
         if ctx.state == 'enter':
@@ -286,6 +333,8 @@ class AnyAttr(Expr):
             log("ANYATTR FAILED")
             return ctx.set_res(State.FAILED)
 
+#####
+
 class Value(Expr):
     def do(self, data, ctx) -> State:
         ctx.init_state(self)
@@ -297,6 +346,20 @@ class Value(Expr):
                     return ctx.set_res(State.SUCCESS)
             log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
+
+class AnyValue(BTItem):
+    def do(self, data, ctx) -> State:
+        ctx.init_state(self)
+        log("ANYVALUE %s" % (ctx.state))
+        if ctx.state == 'enter':
+            if self.expr:
+                if 'value' == data[Pos.TYPE]:
+                    log("Match AnyValue")
+                    return ctx.set_res(State.SUCCESS)
+            log("ANYVALUE FAILED")
+            return ctx.set_res(State.FAILED)
+
+#####
 
 class Type(Pair):
     def do(self, data, ctx) -> State:
@@ -319,11 +382,51 @@ class Type(Pair):
             ctx.state = 'final'
             return ctx.set_res(State.RUNNING)
         if ctx.state == 'final':
-            log("%s ?? %s" % (type(data[Pos.ARG]).__name__, self.first))
-            if 'type' == data[0] and type(data[Pos.ARG]).__name__ == self.first:
+            log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
+            if 'type' == data[0] and type(data[Pos.ARG]) is self.first:
                 log("Match Type %r" % self.first)
                 return ctx.set_res(State.SUCCESS)
             log("TYPE FAILED")
             return ctx.set_res(State.FAILED)
 
+class KindOf(Pair):
+    def do(self, data, ctx) -> State:
+        ctx.init_state(self)
+        log("KIND %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'enter' != data[Pos.TYPE]:
+                return ctx.set_res(State.FAILED)
+            ctx.uid = data[Pos.UID]
+            if self.second:
+                ctx.state = 'sub'
+            else:
+                ctx.state = 'final'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'sub':
+            ctx.init_second()
+            res = self.second.do(data, ctx.second)
+            if res != State.SUCCESS:
+                return ctx.set_res(res)
+            ctx.state = 'final'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'final':
+            log("%s ?? %s" % (type(data[Pos.ARG]).__name__, repr(self.first)))
+            if 'type' == data[0] and isinstance(data[Pos.ARG], self.first):
+                log("Match Type %r" % self.first)
+                return ctx.set_res(State.SUCCESS)
+            log("KIND FAILED")
+            return ctx.set_res(State.FAILED)
+####
+
+class Ancestor(Pair):
+    def __init__(self, first, second=None, depth=0, strict=True):
+        Pair.__init__(self, first, second)
+        self.depth = depth
+
+class Sibling(Component):
+    def __init__(self, *subs, strict=True):
+        # strict means that all siblings are at the same level
+        # non strict, siblings have just a common ancestor
+        Component.__init__(self, *subs)
+        self.strict = strict
 ############

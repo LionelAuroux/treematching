@@ -1,7 +1,7 @@
 import unittest
 
 from treematching.matchingbtree import *
-from treematching.btp import *
+from treematching.btitems import *
 from treematching.debug import *
 
 class Dummy:
@@ -43,11 +43,11 @@ class TestBTP(unittest.TestCase):
         """
         literal subtree
         """
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        Attr('a', Type('int', Value(32))),
-                        Attr('b', Type('str', Value('toto'))),
-                        Attr('c', Type('str', Value('lala')))
+                        Attr('a', Type(int, Value(32))),
+                        Attr('b', Type(str, Value('toto'))),
+                        Attr('c', Type(str, Value('lala')))
                     )
             )
         e = MatchingBTree(bt)
@@ -65,11 +65,11 @@ class TestBTP(unittest.TestCase):
         """
         unordered attrs
         """
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        Attr('c', Type('str', Value('lala'))),
-                        Attr('b', Type('str', Value('toto'))),
-                        Attr('a', Type('int', Value(32))),
+                        Attr('c', Type(str, Value('lala'))),
+                        Attr('b', Type(str, Value('toto'))),
+                        Attr('a', Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -83,7 +83,7 @@ class TestBTP(unittest.TestCase):
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
         # stricly empty
-        bt = Type('A')
+        bt = Type(A)
         e = MatchingBTree(bt)
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A()), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
@@ -93,11 +93,11 @@ class TestBTP(unittest.TestCase):
         """
         not strict attrs
         """
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        Attr('c', Type('str', Value('lala'))),
-                        Attr('b', Type('str', Value('toto'))),
-                        Attr('a', Type('int', Value(32))),
+                        Attr('c', Type(str, Value('lala'))),
+                        Attr('b', Type(str, Value('toto'))),
+                        Attr('a', Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -109,7 +109,7 @@ class TestBTP(unittest.TestCase):
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict attrs")
         # empty
-        bt = Type('A', Attrs(AnyAttr(), strict=False))
+        bt = Type(A, Attrs(AnyAttr(), strict=False))
         e = MatchingBTree(bt)
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
@@ -119,11 +119,11 @@ class TestBTP(unittest.TestCase):
         """
         list
         """
-        bt = Type('AL',
+        bt = Type(AL,
                     List(
-                        Idx(2, Type('str', Value('lala'))),
-                        Idx(1, Type('str', Value('toto'))),
-                        Idx(0, Type('int', Value(32))),
+                        Idx(2, Type(str, Value('lala'))),
+                        Idx(1, Type(str, Value('toto'))),
+                        Idx(0, Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -141,11 +141,11 @@ class TestBTP(unittest.TestCase):
         """
         dict
         """
-        bt = Type('AD',
+        bt = Type(AD,
                     Dict(
-                        Key('c', Type('str', Value('lala'))),
-                        Key('b', Type('str', Value('toto'))),
-                        Key('a', Type('int', Value(32))),
+                        Key('c', Type(str, Value('lala'))),
+                        Key('b', Type(str, Value('toto'))),
+                        Key('a', Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -163,11 +163,11 @@ class TestBTP(unittest.TestCase):
         """
         list non strict
         """
-        bt = Type('AL',
+        bt = Type(AL,
                     List(
-                        Idx(2, Type('str', Value('lala'))),
-                        Idx(1, Type('str', Value('toto'))),
-                        Idx(0, Type('int', Value(32))),
+                        Idx(2, Type(str, Value('lala'))),
+                        Idx(1, Type(str, Value('toto'))),
+                        Idx(0, Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -185,7 +185,7 @@ class TestBTP(unittest.TestCase):
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict list")
         # empty
-        bt = Type('AL', List(AnyIdx(), strict=False))
+        bt = Type(AL, List(AnyIdx(), strict=False))
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 'lili'])]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict list")
@@ -195,11 +195,11 @@ class TestBTP(unittest.TestCase):
         """
         dict non strict
         """
-        bt = Type('AD',
+        bt = Type(AD,
                     Dict(
-                        Key('c', Type('str', Value('lala'))),
-                        Key('b', Type('str', Value('toto'))),
-                        Key('a', Type('int', Value(32))),
+                        Key('c', Type(str, Value('lala'))),
+                        Key('b', Type(str, Value('toto'))),
+                        Key('a', Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -217,7 +217,7 @@ class TestBTP(unittest.TestCase):
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict dict")
         # empty
-        bt = Type('AD', Dict(AnyKey(), strict=False))
+        bt = Type(AD, Dict(AnyKey(), strict=False))
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AD({'a': 32, 'b': 'toto', 'c': 'lala'})), AD({'a': 32, 'b': 'toto', 'c': 'lala', 'd': 42})]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict dict")
@@ -226,11 +226,11 @@ class TestBTP(unittest.TestCase):
         """
         strict attrs with anyattr
         """
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        AnyAttr(Type('str', Value('lala'))),
-                        AnyAttr(Type('str', Value('toto'))),
-                        AnyAttr(Type('int', Value(32))),
+                        AnyAttr(Type(str, Value('lala'))),
+                        AnyAttr(Type(str, Value('toto'))),
+                        AnyAttr(Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -239,11 +239,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        AnyAttr(Type('str', Value('lala'))),
-                        AnyAttr(Type('str', Value('toto'))),
-                        Attr('a', Type('int', Value(32))),
+                        AnyAttr(Type(str, Value('lala'))),
+                        AnyAttr(Type(str, Value('toto'))),
+                        Attr('a', Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -252,11 +252,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
-        bt = Type('A',
+        bt = Type(A,
                     Attrs(
-                        AnyAttr(Type('str', Value('lala'))),
-                        AnyAttr(Type('str', Value('toto'))),
-                        Attr('a', Type('int', Value(32))),
+                        AnyAttr(Type(str, Value('lala'))),
+                        AnyAttr(Type(str, Value('toto'))),
+                        Attr('a', Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -271,11 +271,11 @@ class TestBTP(unittest.TestCase):
         """
         strict list with anyattr
         """
-        bt = Type('AL',
+        bt = Type(AL,
                     List(
-                        AnyIdx(Type('str', Value('lala'))),
-                        AnyIdx(Type('str', Value('toto'))),
-                        AnyIdx(Type('int', Value(32))),
+                        AnyIdx(Type(str, Value('lala'))),
+                        AnyIdx(Type(str, Value('toto'))),
+                        AnyIdx(Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -284,11 +284,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
-        bt = Type('AL',
+        bt = Type(AL,
                     List(
-                        AnyIdx(Type('str', Value('lala'))),
-                        AnyIdx(Type('str', Value('toto'))),
-                        Idx(0, Type('int', Value(32))),
+                        AnyIdx(Type(str, Value('lala'))),
+                        AnyIdx(Type(str, Value('toto'))),
+                        Idx(0, Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -297,11 +297,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
-        bt = Type('AL',
+        bt = Type(AL,
                     List(
-                        AnyIdx(Type('str', Value('lala'))),
-                        AnyIdx(Type('str', Value('toto'))),
-                        Idx(0, Type('int', Value(32))),
+                        AnyIdx(Type(str, Value('lala'))),
+                        AnyIdx(Type(str, Value('toto'))),
+                        Idx(0, Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -316,11 +316,11 @@ class TestBTP(unittest.TestCase):
         """
         strict dict with anyattr
         """
-        bt = Type('AD',
+        bt = Type(AD,
                     Dict(
-                        AnyKey(Type('str', Value('lala'))),
-                        AnyKey(Type('str', Value('toto'))),
-                        AnyKey(Type('int', Value(32))),
+                        AnyKey(Type(str, Value('lala'))),
+                        AnyKey(Type(str, Value('toto'))),
+                        AnyKey(Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -329,11 +329,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
-        bt = Type('AD',
+        bt = Type(AD,
                     Dict(
-                        AnyKey(Type('str', Value('lala'))),
-                        AnyKey(Type('str', Value('toto'))),
-                        Key('a', Type('int', Value(32))),
+                        AnyKey(Type(str, Value('lala'))),
+                        AnyKey(Type(str, Value('toto'))),
+                        Key('a', Type(int, Value(32))),
                     )
             )
         e = MatchingBTree(bt)
@@ -342,11 +342,11 @@ class TestBTP(unittest.TestCase):
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
-        bt = Type('AD',
+        bt = Type(AD,
                     Dict(
-                        AnyKey(Type('str', Value('lala'))),
-                        AnyKey(Type('str', Value('toto'))),
-                        Key('a', Type('int', Value(32))),
+                        AnyKey(Type(str, Value('lala'))),
+                        AnyKey(Type(str, Value('toto'))),
+                        Key('a', Type(int, Value(32))),
                         strict=False
                     )
             )
@@ -361,7 +361,7 @@ class TestBTP(unittest.TestCase):
         """
         basic capture
         """
-        bt = Capture('a', Type('A'))
+        bt = Capture('a', Type(A))
         e = MatchingBTree(bt)
         tree = [A(), B(), C()]
         match = e.match(tree)
@@ -376,7 +376,7 @@ class TestBTP(unittest.TestCase):
         self.assertEqual(id(match[0].capture['a']), id(tree[1].c), "Failed to capture correctly")
         self.assertEqual(id(match[1].capture['a']), id(tree[2].e), "Failed to capture correctly")
 
-        bt = Capture('a', List(AnyIdx(Type('int', Value(32))), strict=False))
+        bt = Capture('a', List(AnyIdx(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt)
         tree = [AL([44, 46, 47]), BL([12, 18, 23, 32]), CL([1, 32]), 12, 42]
         match = e.match(tree)
@@ -384,7 +384,7 @@ class TestBTP(unittest.TestCase):
         self.assertEqual(id(match[0].capture['a']), id(tree[1]), "Failed to capture correctly")
         self.assertEqual(id(match[1].capture['a']), id(tree[2]), "Failed to capture correctly")
 
-        bt = Capture('a', Attrs(AnyAttr(Type('int', Value(32))), strict=False))
+        bt = Capture('a', Attrs(AnyAttr(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt)
         tree = [A(a=44, b=46, c=47), B(a=12, b=18, c=23, d=32), C(a=1, b=32), 12, 42]
         match = e.match(tree)
@@ -392,10 +392,13 @@ class TestBTP(unittest.TestCase):
         self.assertEqual(id(match[0].capture['a']), id(vars(tree[1])), "Failed to capture correctly")
         self.assertEqual(id(match[1].capture['a']), id(vars(tree[2])), "Failed to capture correctly")
 
-        bt = Capture('a', Dict(AnyKey(Type('int', Value(32))), strict=False))
+        bt = Capture('a', Dict(AnyKey(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt)
         tree = {'a': AD({'a': 44, 'b': 46, 'c': 47}), 'b': BD({'a': 12, 'b': 18, 'c': 23, 'd': 32}), 'c': CD({'a': 1, 'b': 32}), 'd': 12, 'e': 42}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match and capture")
         self.assertEqual(id(match[0].capture['a']), id(tree['b']), "Failed to capture correctly")
         self.assertEqual(id(match[1].capture['a']), id(tree['c']), "Failed to capture correctly")
+
+
+    # TODO: AnyValue, KindOf, Hook, Event, Condition, Ancestor, Sibling

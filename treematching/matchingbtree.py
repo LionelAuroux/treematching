@@ -1,5 +1,7 @@
 """
-    Behavior Tree for Pattern Matching
+    Behavior Tree for Pattern Matching...
+
+    Main module that provide a match object...
 """
 
 import collections as c
