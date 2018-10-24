@@ -41,7 +41,7 @@ class ED(DummyDict): pass
 class TestBTP(unittest.TestCase):
     def test_01(self):
         """
-        literal subtree
+        literal subtree with Type, Attrs, Attr, Value, AnyType, AnyValue
         """
         bt = Type(A,
                     Attrs(
@@ -52,6 +52,23 @@ class TestBTP(unittest.TestCase):
             )
         e = MatchingBTree(bt)
         tree = A(a=32, b='toto', c='lala')
+        match = e.match(tree)
+        self.assertEqual(len(match), 1, "Failed to match a basic tree")
+        tree = [B(a=32, b='toto', c='lala'), A(a=32, b='toto', c='lala')]
+        match = e.match(tree)
+        self.assertEqual(len(match), 1, "Failed to match a basic tree")
+        tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
+        match = e.match(tree)
+        self.assertEqual(len(match), 1, "Failed to match a basic tree")
+        bt = Type(A,
+                    Attrs(
+                        Attr('a', AnyType(AnyValue())),
+                        Attr('b', AnyType(AnyValue())),
+                        Attr('c', AnyType(AnyValue()))
+                    )
+            )
+        e = MatchingBTree(bt)
+        tree = A(a=3.2, b=b'toto', c=b'lala')
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
         tree = [B(a=32, b='toto', c='lala'), A(a=32, b='toto', c='lala')]
@@ -400,5 +417,35 @@ class TestBTP(unittest.TestCase):
         self.assertEqual(id(match[0].capture['a']), id(tree['b']), "Failed to capture correctly")
         self.assertEqual(id(match[1].capture['a']), id(tree['c']), "Failed to capture correctly")
 
+    def test_12(self):
+        """
+        KindOf
+        """
+        class Base:
+            def __repr__(self) -> str:
+                return "%s(%s)" % (type(self).__name__, repr(self.__dict__))
+        class Sub1(Base, AL):
+            def __repr__(self) -> str:
+                return "%s(%s, %s)" % (type(self).__name__, list.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
+        class Sub2(Base, AD):
+            def __repr__(self) -> str:
+                return "%s(%s, %s)" % (type(self).__name__, dict.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
+        class Sub3(Base, Dummy):
+            pass
 
-    # TODO: AnyValue, KindOf, Hook, Event, Condition, Ancestor, Sibling
+        bt = KindOf(Base,
+                    Attrs(
+                        Attr('flags', AnyType(AnyValue())),
+                        strict=False
+                    )
+            )
+        e = MatchingBTree(bt)
+        tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True), Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})), Sub1([12, 14, 16], flags='toto', a=12)],
+            'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
+            }
+        log_on()
+        match = e.match(tree)
+        log_off()
+        self.assertEqual(len(match), 1, "Failed to match an KindOf")
+
+    # TODO: KindOf, Hook, Event, Condition, Ancestor, Sibling

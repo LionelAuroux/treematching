@@ -1,4 +1,5 @@
 trace = False
+import sys
 
 def log_on():
     global trace
