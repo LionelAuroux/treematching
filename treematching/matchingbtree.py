@@ -9,14 +9,14 @@ from treematching.matchcontext import *
 from treematching.debug import *
 
 def walk(tree, uid=[(0, 0)]) -> object:
-    yield ('enter', None, 0, uid)
+    #yield ('enter', None, 0, uid)
     depth, parent = uid[-1]
     nchild = 0
     if isinstance(tree, c.Mapping):
         lsk = list(sorted(tree.keys()))
         len_dict = len(lsk)
-        if len_dict:
-            yield ('enter_dict', None, 2, uid)
+        #if len_dict:
+        #    yield ('enter_dict', None, 2, uid)
         for k in lsk:
             # value, going depth
             nuid = uid + [(depth + 1, nchild)]
@@ -30,8 +30,8 @@ def walk(tree, uid=[(0, 0)]) -> object:
     elif isinstance(tree, c.Iterable) and type(tree) not in {str, bytes}:
         ls = enumerate(tree)
         len_ls = len(tree)
-        if len_ls:
-            yield ('enter_list', None, 2, uid)
+        #if len_ls:
+        #    yield ('enter_list', None, 2, uid)
         for idx, it in ls:
             # value, going depth
             nuid = uid + [(depth + 1, nchild)]
@@ -45,8 +45,8 @@ def walk(tree, uid=[(0, 0)]) -> object:
     if hasattr(tree, '__dict__'):
         attrs = vars(tree)
         len_attr = len(attrs)
-        if len_attr:
-            yield ('enter_attrs', None, 4, uid)
+        #if len_attr:
+        #    yield ('enter_attrs', None, 4, uid)
         for k in sorted(attrs.keys()):
             # value, going depth
             nuid = uid + [(depth + 1, nchild)]
@@ -70,11 +70,11 @@ class MatchingBTree:
         self.state = State.RUNNING
         self.bt = bt
 
-    def do(self, data, ctx) -> State:
+    def do(self, data, ctx, user_data) -> State:
         log("MatchingBTree")
-        return self.bt.do(data, ctx)
+        return self.bt.do(data, ctx, user_data)
 
-    def match(self, tree):
+    def match(self, tree, user_data=None):
         glist = []
         match = []
         for idx, it in enumerate(walk(tree)):
@@ -82,18 +82,19 @@ class MatchingBTree:
             log("LEN // %d" % len(glist))
             glist.append(MatchContext())
             dlist = []
+            # TODO: idx?
             for idx, g in enumerate(glist):
-                log("TEST %d" % idx)
-                r = self.do(it, g)
-                log("RES %s" % repr(r))
+                log("MATCH TEST %d" % idx)
+                r = self.do(it, g, user_data)
+                log("MATCH RES %d %s" % (id(g), repr(r)))
                 if r == State.FAILED:
-                    log("ADD REMOVE: %d" % idx)
+                    log("MATCH ADD REMOVE: %d" % idx)
                     dlist.append(g)
                 if r == State.SUCCESS:
                     match.append(g)
                     dlist.append(g)
             for d in dlist:
-                log("REMOVE")
+                log("DO REMOVE: %d" % id(d))
                 glist.remove(d)
             log("%s\n" % ('-' * 20))
         return match

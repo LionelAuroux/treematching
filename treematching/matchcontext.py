@@ -31,8 +31,26 @@ class MatchContext:
             r = r.parent
         return curr
 
+    def getcomponent(self):
+        r = self.parent
+        if r is None:
+            return self
+        while True:
+            if hasattr(r, 'matching'):
+                return r
+            if r.parent is not None:
+                r = r.parent
+            else:
+                return r
+
     def set_res(self, r):
+        log("SET RES %d TO %s" % (id(self), r))
         self.res = r
+        component = self.getcomponent()
+        log("SET RES Match %s in upper component %d" % (r, id(component)))
+        if r == State.SUCCESS:
+            component.matching = True
+            log("SET!!!!")
         return r
 
     def __repr__(self) -> str:
@@ -59,6 +77,16 @@ class MatchContext:
             self.type = type(oth).__name__
             self.state = 'enter'
 
+    def init_first(self):
+        """
+            mimic first of Pair
+        """
+        if not hasattr(self, 'first'):
+            log("create first")
+            self.first = MatchContext()
+            # connect to parent
+            self.first.parent = self
+
     def init_second(self):
         """
             mimic second of Expr/Pair
@@ -78,6 +106,18 @@ class MatchContext:
             self.maxidx = len(l)
             self.subs = []
             for i in range(self.maxidx):
-                self.subs.append(MatchContext())
+                s = MatchContext()
                 # connect to parent
-                self.subs[-1].parent = self
+                s.parent = self
+                self.subs.append(s)
+
+    def reset_tree(self):
+        self.state = 'enter'
+        self.res = State.RUNNING
+        if hasattr(self, 'first'):
+            self.first.reset_tree()
+        if hasattr(self, 'second'):
+            self.second.reset_tree()
+        if hasattr(self, 'subs'):
+            for s in self.subs:
+                s.reset_tree()
