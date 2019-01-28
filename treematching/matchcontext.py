@@ -50,7 +50,7 @@ class MatchContext:
         log("SET RES Match %s in upper component %d" % (r, id(component)))
         if r == State.SUCCESS:
             component.matching = True
-            log("SET!!!!")
+            log("SET!!!! on %d" % id(component))
         return r
 
     def __repr__(self) -> str:

@@ -449,35 +449,43 @@ class TestBTP(unittest.TestCase):
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
         match = e.match(tree)
-        # TODO: 1 -> 2
         self.assertEqual(len(match), 2, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, 12, "Failed to match a KindOf")
+        self.assertIs(type(match[0].capture['a']), Sub3, "Failed to match a KindOf")
         self.assertEqual(match[1].capture['a'].flags, 'toto', "Failed to match a KindOf")
+        self.assertIs(type(match[1].capture['a']), Sub1, "Failed to match a KindOf")
         bt = Capture('a', KindOf(Base,
-                    Any(AnyList(),
+                        AnyList(),
+                        AnyDict(),
                         Attrs(
                             Attr('flags', AnyType(AnyValue())),
                             strict=False
-                        )
-                    )
-            ))
+                        ),
+                   )
+            )
+        log_on()
+        log_json(bt)
+        log_off()
         e = MatchingBTree(bt)
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
+        #log_on()
         match = e.match(tree)
+        log_json(match)
+        #log_off()
         self.assertEqual(len(match), 1, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, 'toto', "Failed to match a KindOf")
         bt = Capture('a', KindOf(Base,
-                    Any(AnyDict(),
+                        AnyDict(),
                         Attrs(
                             Attr('flags', AnyType(AnyValue())),
                             strict=False
                         )
                     )
-            ))
+            )
         e = MatchingBTree(bt)
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
@@ -531,10 +539,55 @@ class TestBTP(unittest.TestCase):
         def hook_test(capture, user_data):
             user_data.assertTrue(isinstance(capture['a'], A), "Failed to Ancestor")
             return True
+        def hook_test2(capture, user_data):
+            user_data.assertTrue(isinstance(capture['a'], AL), "Failed to Ancestor")
+            return True
+        def hook_test3(capture, user_data):
+            user_data.assertTrue(isinstance(capture['a'], AD), "Failed to Ancestor")
+            return True
         bt = Hook(hook_test, Capture('a', Ancestor(Type(A), Type(B))))
         e = MatchingBTree(bt)
         tree = [A(), C(), C(z=A(a=B()))]
         match = e.match(tree, self)
         self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+        bt = Hook(hook_test, Capture('a', Ancestor(Type(A), Type(B), 2)))
+        e = MatchingBTree(bt)
+        tree = [A(), C(), C(z=A(a=C(a=B())))]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+        bt = Hook(hook_test, Capture('a', Ancestor(Type(A), Type(B), 3)))
+        e = MatchingBTree(bt)
+        tree = [A(), C(), C(z=A(a=C(z=A(a=B()))))]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+        bt = Hook(hook_test, Capture('a', Ancestor(Type(A), Type(B), 3, strict=False)))
+        e = MatchingBTree(bt)
+        tree = [A(), C(), C(z=A(a=C(g=D(z=A(a=B())))))]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+        bt = Hook(hook_test2, Capture('a', Ancestor(Type(AL), Type(B))))
+        e = MatchingBTree(bt)
+        tree = [A(), C(), C(z=AL([B()]))]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+        bt = Hook(hook_test3, Capture('a', Ancestor(Type(AD), Type(B))))
+        e = MatchingBTree(bt)
+        tree = [A(), C(), C(z=AD({'plop': B()}))]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
     
-    # TODO: Event, Condition, Ancestor, Sibling
+    def test_15(self):
+        """
+        Sibling
+        """
+        def hook_test(capture, user_data):
+            user_data.assertTrue(isinstance(capture['a'], A), "Failed to Sibling")
+            user_data.assertTrue(isinstance(capture['b'], B), "Failed to Sibling")
+            return True
+        bt = Hook(hook_test, Sibling(Capture('a', Type(A)), Capture('b', Type(B))))
+        e = MatchingBTree(bt)
+        tree = [A(), B(), C()]
+        match = e.match(tree, self)
+        self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+
+    # TODO: Event, Condition

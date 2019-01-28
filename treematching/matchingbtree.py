@@ -9,6 +9,9 @@ from treematching.matchcontext import *
 from treematching.debug import *
 
 def walk(tree, uid=[(0, 0)]) -> object:
+    """
+    Bottom-up walker
+    """
     #yield ('enter', None, 0, uid)
     depth, parent = uid[-1]
     nchild = 0
@@ -88,9 +91,10 @@ class MatchingBTree:
                 r = self.do(it, g, user_data)
                 log("MATCH RES %d %s" % (id(g), repr(r)))
                 if r == State.FAILED:
-                    log("MATCH ADD REMOVE: %d" % idx)
+                    log("NOMATCH ADD REMOVE: %d" % idx)
                     dlist.append(g)
                 if r == State.SUCCESS:
+                    log("MATCH ADD REMOVE: %d" % idx)
                     match.append(g)
                     dlist.append(g)
             for d in dlist:
