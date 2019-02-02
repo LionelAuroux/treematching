@@ -1,354 +1,272 @@
-% DSL with pyrser
-% Author: L. Auroux
-% lionel@lse.epita.fr \
-    For pyParis 2018
+% Tree matchings with Behavior Trees
+% FOSDEM 2019
+
+How to recognize a complex subtree in a big tree
+
+![](sample_tree.png){#id .class width=130}
+
+lionel@lse.epita.fr
+FOSDEM - Python Devroom 2019 ![Sequence](gear_logo.png){#id .class width=30}
 
 # Quick summary
 
-* About Domain Specific Modeling/Language
-* About Compiler creation...
+* About Behavior Tree
+* About Tree Matching...
 * ...in python
-* About Pyrser
 
-# About Domain Specific Modeling/Language
+# About Behavior Tree
 
-Each domain have his own words, relying on his own concepts.
+A powefull abstraction to defined Process.
 
-```
-If I'm selling to you, I speak your language.
-If I'm buying, Alors vous devez me parler en Français!
-                    
-            thanks Willy Brandt
-```
+Common in Video Game to implement BOT AI.
 
-# About Domain Specific Modeling/Language
+![](behavior_tree.png){#id .class width=60% }
 
-DSM literally follow this principe by promoting the design of DSL to mimic words and concepts of domain.
+# About Behavior Tree
 
-* Domain: system, class of problems
-* DSM: Domain Specific Modeling
-* DSL: Domain Specific Language
+3 components:
 
-# About Domain Specific Modeling/Language
+* Task \
+    Do a simple thing \
+    ![Task](task.png){#id .class width=40}
+* Sequence \
+    Do the next if the previous succeed \
+    ![Sequence](sequence.png){#id .class width=160 }
+* Selector \
+    Do the next if the previous failed \
+    ![Selector](selector.png){#id .class width=160 }
 
-So:
+# About Behavior Tree
 
-* No more specification in human language
-* Get a formal language for the Domain
-
-And:
-
-* Words become Abstractions
-* Concepts become Algorithm
-* DSL as direct input for ad-hoc tools
-
-# About Compiler creation...
-
-Two way to create DSL.
-
-1) Embedded DSL (use a host language)
+## Task
 
 ```python
-from scapy.all import *
-# ...
-ether = Ether(dst="ff:ff:ff:ff:ff:ff")
-ip = IP(src="0.0.0.0",dst="255.255.255.255")
-udp = UDP(sport=68,dport=67)
-bootp = BOOTP(chaddr=hw)
-dhcp = DHCP(options=[("message-type","discover"),
-    "end"])
-dhcp_discover = ether / ip / udp / bootp / dhcp
+from enum import IntEnum
 
-ans, unans = srp(dhcp_discover, multi=True,
-    timeout=5)
+Status = IntEnum('Status', [
+            'Failure',
+            'Success',
+            'Running'
+    ])
+
+class Task:
+    def tick(self, udata) -> Status:
+        return Status.Success
+
+class Tree:
+    def __init__(self, *child):
+        self.child = child
 ```
 
-# About Compiler creation...
+# About Behavior Tree
 
-2) True Compiler/Interpreter
-
-## Anatomy of a compiler
-
-* Grammar -> Parsing -> AST
-* Handle AST:
-    - semantic
-    - typing
-* Interpretation / Code generation
-
-# Type of grammar
-
-* CFG (Context Free Grammar)
-    - Production rules -> Automata
-    - Token (scanner)
-    - Parser
-
-* PEG (Parsing Expression Grammar) (2004)
-    - Scannerless
-    - Top-down recursive parser with memoization
-        - so Rules are functions/methods
-    - Priority choice
-
-# ... in python
-
-* CFG (Context Free Grammar)
-    - PLY
-    - PlyPlus
-    - Lrparsing
-    - ...
-* PEG (Parsing Expression Grammar)
-    - Arpeggio (Aug 2014)
-    - Parsimonious (Dec 2012)
-    - Tatsu (May 2017), Grako (Jun 2013)
-    - Pyrser (Aug 2013)
-    - ...
-
-# About Pyrser
-
-## A bit of history
-
-Epitech KOOC Project (2013-2017): Kind Of Object C.
-
-* Student must create a superset of C language with classes (CFront revival).
-* Compiler write in pyrser (Cnorm)
-* Compiler product C
-
-## Why another tool?
-
-What other tools do that bother me:
-
-* Automatic CST (parse tree) creation
-* Provide only features for parsing
-* Mix grammar and host language (action)
-* Python3
-* PEG in 2013!
-
-# Pyrser main features
-
-```shell
-iopi$ pip3 install pyrser
-```
-
-* Parsing:
-    - Basic classes provide PEG Parser in a EDSL way
-    - BNF like language to write Grammar
-* Tree handling:
-    - PSL (Pyrser Selector Language)
-    - Tree matching and rewriting
-* Type checking:
-    - You have module for type check your language.
-
-# Grammar examples
-
-1) CSV parser
+## Sequence
 
 ```python
-from pyrser import grammar
-class Csv(grammar.Grammar):
-    entry = "csv"
-    grammar = """
-        csv = [
-            @ignore("null") [ line eol ]+
-            line? eof
-        ]
-
-        line = [
-            item [';' item ]*
-        ]
-
-        item = [ [ ~[';' | eol] ]* ]
-    """
+class Sequence(Tree):
+    def tick(self, udata) -> Status:
+        for child in self.child:
+            childstatus = child.tick(udata)
+            if childstatus == Status.Running:
+                return Status.Running
+            elif childstatus == Status.Failure:
+                return Status.Failure
+        return Status.Success
 ```
 
-# Grammar definition
+# About Behavior Tree
 
-\tiny
-
-```
-'a':
-    Read the character a in the input.
-"foo":
-    Read the text foo in the input.
-'a'..'z':
-    Read the next character if its value is between a and z.
-
-expr1 expr2 | expr3 expr4:
-    Alternative (priority choice).
-    If the sequence expr1 followed by expr2 fail, backtrack and try expr3 followed by expr4
-!expr:
-    Negative lookahead.
-    Fails if the next item in the input matches expr.
-    Consumes no input.
-!!expr:
-    Positive lookahead.
-    Fails if the next item in the input does not matches expr.
-    Consumes no input.
-~expr:
-    Complement of expr.
-    Consumes one character if the next item in the input does not matches expr.
-->expr:
-    Read until expr. Consumes any characters until the next item in the input matches expr.
-```
-
-\normalsize
-
-# Grammar examples
-
-* Grammar is a Class
-    - so inheritable (grammar composition)
-
-* Rule are Method
-    - so overidable
-
+## Selector
 
 ```python
-class A(grammar.Grammar):
-    grammar="""
-        rule = [ id eof ]
-    """
-
-class B(grammar.Grammar, A):
-    grammar="""
-        rule = [ [ A.rule | string ] eof ]
-    """
+class Selector(Tree):
+    def tick(self, udata) -> Status:
+        for child in self.child:
+            childstatus = child.tick(udata)
+            if childstatus == Status.Running:
+                return Status.Running
+            elif childstatus == Status.Success:
+                return Status.Success
+        return Status.Failure
 ```
 
-# Grammar examples
+# About Behavior Tree
 
-* 2 abstractions two handle AST:
-    - Nodes for data handling
-    - Hooks for event handling
+Base on few principe, you could easlisy create your own abstraction
+
+# About Behavior Tree
+
+## Concurrent
+
+\small
 
 ```python
-// inside a DummyGrammar
-R = [
-    ThisRuleReturnSomethingIn_ : weCaptureInThisNode
-]
-
-ThisRuleReturnSomethingIn_ = [
-    #putSomethingIn(_)
-]
+class Concurrent(Tree):
+    def tick(self, udata) -> Status:
+        for idx, child in enumerate(self.child):
+            if self.status[idx] == Status.Running:
+                self.status[idx] = child.tick(udata)
+        if (not sum(map(lambda _: _ == Status.Running,
+             self.status))):
+            if (sum(map(lambda _: _ == Status.Success,
+                 self.status))):
+                return Status.Success
+            return Status.Failure
+        return Status.Running
 ```
 
-* weCaptureInThisNode is a **Node**
-* _ is the returning **Node** of the **current** Rule
-* \#putSomethingIn is **hook**
-* **Node** livecycle is attached to his **Rule**
+# About Tree Matching
 
-# Grammar examples
+Use cases:
 
-Defining hooks outside the class **DummyGrammar** definition.
+* Data Validation
+* Data Transformation
+* Data Generation
+
+All in Compiler (AST)
+
+# About Tree Matching
+
+Tree Handling:
+
+- Descent recursive function (Tree Walk)
+- Pattern Matching:
+    * Identify nodes
+    * Deconstruct it and do something
+- Top-down
+
+# About Tree Matching
+
+Top-down pattern matching is it enough?
+
+Tree Reconstruction (update tree during walking) -> Bottom-Up
+
+# About Tree Matching
+
+Intuition: Using BT to match subtree?
+
+* Behavior Tree mimic matching subtree
+* Versatile (Top-Down and/or Bottom-Up)
+
+
+# Handle Python tree
+
+Get a generic python data tree
+```python
+class A:
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+class B(dict):
+    def __init__(self, d, **kw):
+        self.update(d)
+        self.__dict__.update(kw)
+
+class C(list):
+    def __init__(self, l, **kw):
+        self.extend(l)
+        self.__dict__.update(kw)
+```
+
+# Handle Python tree
 
 ```python
-from pyrser import meta
-
-@meta.hook(DummyGrammar)
-def putSomethingIn(self, _):
-    _.is_touched = True
-    return True
+a = A(foo=42,
+        bar=C([
+                1, 2, 3,
+                B(h={'low': 1.2, 'high': 3.4}),
+                4, 5, 6
+            ],
+            meh=3
+            )
+    )
 ```
 
-# Grammar examples
+# Handle Python tree
 
-More complete examples:
+Separation of concern:
 
-* How to create a JSON parser:
+![](matching_process.png){#id .class}
 
-**[https://pythonhosted.org/pyrser/tutorial1.html](https://pythonhosted.org/pyrser/tutorial1.html)**
+# Handle Python tree
 
-* A complete C Frontend:
+To handle it
 
-**[https://github.com/LionelAuroux/cnorm](https://github.com/LionelAuroux/cnorm)**
-**[https://pythonhosted.org/cnorm/](https://pythonhosted.org/cnorm/)**
+* vars
+* getattr
+* collections.Mapping
+* collections.Iterable
+* yield
 
-# Pyrser Selector Language
+# Handle Python tree
 
-PSL describe what to **match** and what to **transform**
+A generic walking function
+\small
 
 ```python
-import pyrser.ast.psl as psl
-
-parser = psl.PSL()
-psl_comp = parser.compile("""
-{
-    A(...) -> a => #hook;
-}
-""")
+def walk(tree):
+    if isinstance(tree, c.Mapping):
+        lsk = list(sorted(tree.keys()))
+        for k in lsk:
+            yield from walk(tree[k])
+            ...
+    elif (isinstance(tree, c.Iterable) \
+          and type(tree) not in {str, bytes}):
+        ls = enumerate(tree)
+        for idx, it in ls:
+            yield from walk(it)
+            ...
+    if hasattr(tree, '__dict__'):
+        attrs = vars(tree)
+        for attr in sorted(attrs.keys()):
+            yield from walk(attrs[attr])
+            ...
+    ...
 ```
 
-# Pyrser Selector Language
+# Handle Python tree
+
+Notification
 
 ```python
-def my_hook(capture, user_data):
-    print("captured node %s" % repr(capture['a']))
-    user_data.append(capture['a'])
-
-class A: ...
-
-user_data = []
-t = [1, 2, C(v=A()), {'toto': A(flags=True)}]
-psl.match(t, psl_comp, {'hook': my_hook}, user_data)
+('value', tree)
+('type', tree)
+('attr', attr)
+('key', k)
+('idx', idx)
 ```
 
-# Pyrser Selector Language
+# Handle Python tree
 
-What do we match?
+Behavior Tree Item:
 
-* Type/KindOf
-* Value/AnyValue
-* Attributes
-* List (index/anyIndex)
-* Dict (key/anyKey)
-* Ancestors sequence/Siblings sequence
+* List: Sequence of value/idx
+* Dict: Sequence of value/key
+* Attributes: Sequence of value/attr
+* Type: Concurrent Attributes/List/Dict
 
-And all combinaison of that...
+1 pattern = 1 BT
 
-# Pyrser Type System
+Don't store matching state IN the BT!
 
-Pyrser provides a basic "type system" module to check any producted AST.
+# Handle Python tree
 
-Due to KOOC project, this TS focus on ad-hoc polymorphism.
-
-No type reconstruction yet.
-
-\tiny
+Module __treematching__
 
 ```python
-from pyrser.type_system import *
-
-t1 = Type('int')
-t2 = Type('double')
-var = Var('var1', 'int')
-f1 = Fun('fun1', 'int', [])
-f2 = Fun('fun2', 'int', ['char'])
-f3 = Fun('fun2', 'int', ['int', 'double'])
-scope = Scope(sig=[t1, t2, var, f1, f2, f3])
-print(str(scope))
+bt = AnyType(
+            List(
+                AnyIdx(Type(str, Value('lala'))),
+                AnyIdx(Type(int, Value(666))),
+            ),
+            Attrs(
+                Attr('foo', Type(int, AnyValue()))
+            )
+    )
+e = MatchingBTree(bt)
+...
+match = e.match(tree)
 ```
-\normalsize
-
-# Pyrser Type System
-
-```shell
-scope :
-    type double
-    fun fun1 : () -> int
-    fun fun2 : (char) -> int
-    fun fun2 : (int, double) -> int
-    type int
-    var var1 : int
-```
-
-Pyrser provide technics to connect AST to inference:
-
-**[https://pythonhosted.org/pyrser/tutorial3.html](https://pythonhosted.org/pyrser/tutorial3.html)**
-
-# Roadmap
-
-* KOOC will evolve in KOOC++
-* So, Pyrser needs too
-    - An agnostic version of PSL:
-        treematching (WIP)
-    - A better TS (wand's Type Inference Algo)
 
 # Conclusion
 
@@ -362,6 +280,6 @@ Pyrser provide technics to connect AST to inference:
 
 \tiny
 
-* **[slides](https://github.com/LionelAuroux/pyrser/tree/new\_type\_system/slides/pyparis\_2018/content/pyrser.pdf)**
+* **[slides](https://github.com/LionelAuroux/pyrser/treematching/slides/fosdem\_2019/content/treematching.pdf)**
 
-* **[https://github.com/LionelAuroux/pyrser](https://github.com/LionelAuroux/pyrser)**
+* **[https://github.com/LionelAuroux/treematching](https://github.com/LionelAuroux/treematching)**

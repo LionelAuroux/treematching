@@ -13,8 +13,10 @@ $if(fonttheme)$
 \usefonttheme{$fonttheme$}
 $endif$
 
-\setbeamertemplate{caption}[numbered]
-\setbeamertemplate{caption label separator}{:}
+% \setbeamertemplate{caption}[numbered]
+% \setbeamertemplate{caption label separator}{:}
+\usepackage{caption}
+\captionsetup[figure]{labelformat=empty,labelsep=none}
 \setbeamercolor{caption name}{fg=normal text.fg}
 \setbeamertemplate{blocks}[rounded][shadow=true]
 \setbeamertemplate{items}[square]

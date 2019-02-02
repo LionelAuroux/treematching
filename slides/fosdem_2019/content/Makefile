@@ -1,6 +1,6 @@
 include ../common.mk
 
-PDF = treematchin.pdf 
+PDF = treematching.pdf 
 
 all: ${PDF}
 
