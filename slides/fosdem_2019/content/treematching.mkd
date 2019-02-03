@@ -92,7 +92,7 @@ class Selector(Tree):
 
 # About Behavior Tree
 
-Base on few principe, you could easlisy create your own abstraction
+Base on these few principes, you could easlisy create your own abstraction
 
 # About Behavior Tree
 
@@ -123,31 +123,38 @@ Use cases:
 * Data Transformation
 * Data Generation
 
-All in Compiler (AST)
+These are part of Compiler:
+
+* Semantic check
+* AST Handling
+* Code generation
 
 # About Tree Matching
 
 Tree Handling:
 
-- Descent recursive function (Tree Walk)
+- Descent recursive function (Tree Walking)
 - Pattern Matching:
     * Identify nodes
     * Deconstruct it and do something
 - Top-down
 
-# About Tree Matching
-
 Top-down pattern matching is it enough?
 
-Tree Reconstruction (update tree during walking) -> Bottom-Up
+* Tree Reconstruction (update tree during walking) need Bottom-Up matching
+* Ancestors and Siblings
 
 # About Tree Matching
 
 Intuition: Using BT to match subtree?
 
-* Behavior Tree mimic matching subtree
-* Versatile (Top-Down and/or Bottom-Up)
+![](matching_process.png){#id .class}
 
+# About Tree Matching
+
+* Behavior Tree could mimic matching subtree
+![](translated.png){#id .class width=60% }
+* Versatile (Top-Down and/or Bottom-Up)
 
 # Handle Python tree
 
@@ -171,7 +178,7 @@ class C(list):
 # Handle Python tree
 
 ```python
-a = A(foo=42,
+data_tree = A(foo=42,
         bar=C([
                 1, 2, 3,
                 B(h={'low': 1.2, 'high': 3.4}),
@@ -184,12 +191,6 @@ a = A(foo=42,
 
 # Handle Python tree
 
-Separation of concern:
-
-![](matching_process.png){#id .class}
-
-# Handle Python tree
-
 To handle it
 
 * vars
@@ -197,6 +198,7 @@ To handle it
 * collections.Mapping
 * collections.Iterable
 * yield
+* yield from
 
 # Handle Python tree
 
@@ -238,20 +240,27 @@ Notification
 
 # Handle Python tree
 
-Behavior Tree Item:
+Behavior Tree Item to handle patterns:
 
+* Value: a specific value or any
+* Type: Concurrent Attributes/List/Dict
 * List: Sequence of value/idx
 * Dict: Sequence of value/key
 * Attributes: Sequence of value/attr
-* Type: Concurrent Attributes/List/Dict
-
-1 pattern = 1 BT
-
-Don't store matching state IN the BT!
 
 # Handle Python tree
 
-Module __treematching__
+Matching not a single __tree__ but a __forest__:
+
+* 1 pattern = 1 BT, N concurrent pattern = N BT
+* 1 walking notification = 1 tick on each BT
+* Don't store matching state IN the BT:
+    * self.status[I] become udata.status[I]
+* cleaning
+
+# Handle Python tree
+
+See module __treematching__ on https://github.com/LionelAuroux/treematching 
 
 ```python
 bt = AnyType(
@@ -265,8 +274,24 @@ bt = AnyType(
     )
 e = MatchingBTree(bt)
 ...
-match = e.match(tree)
+match = e.match(data_tree)
 ```
+
+# Handle Python tree
+
+Features of __treematching__ module:
+
+* Value / AnyValue
+* Type / KindOf / AnyType
+* List / AnyList
+* Dict / AnyDict
+* Attrs strictly or not
+* Ancestor and Sibling
+* Nodes capturing
+* Callback function
+
+Status: Cleaning, bug hunting (Integration Testing)
+Documentation: WIP
 
 # Conclusion
 
@@ -280,6 +305,6 @@ match = e.match(tree)
 
 \tiny
 
-* **[slides](https://github.com/LionelAuroux/pyrser/treematching/slides/fosdem\_2019/content/treematching.pdf)**
+* **[slides](https://github.com/LionelAuroux/treematching/tree/master/slides/fosdem\_2019/content/treematching.pdf)**
 
 * **[https://github.com/LionelAuroux/treematching](https://github.com/LionelAuroux/treematching)**
