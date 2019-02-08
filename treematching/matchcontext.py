@@ -97,6 +97,30 @@ class MatchContext:
             # connect to parent
             self.second.parent = self
 
+    def init_steps(self, btitem):
+        """
+            2, 3, 4 steps
+        """
+        # use self.steps....
+        if not hasattr(self, 'steps'):
+            self.steps = []
+        log("LEN steps %s" % len(btitem.steps))
+        if len(btitem.steps) >= 1 and len(self.steps) < 1:
+            log("steps second")
+            self.steps.append(MatchContext())
+            # connect to parent
+            self.steps[0].parent = self
+        if len(btitem.steps) >= 2 and len(self.steps) < 2:
+            log("steps third")
+            self.steps.append(MatchContext())
+            # connect to parent
+            self.steps[1].parent = self
+        if len(btitem.steps) >= 3 and len(self.steps) < 3:
+            log("steps four")
+            self.steps.append(MatchContext())
+            # connect to parent
+            self.steps[2].parent = self
+
     def init_subs(self, l):
         """
             mimic subs of Component

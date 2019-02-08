@@ -196,18 +196,10 @@ class Any(Component): #!!!!!!!!!!!!!!!!!!!
                     sub_ctx.reset_tree()
         return ctx.set_res(State.RUNNING)
 
-class Dict(Component):
-    def __init__(self, *subs, strict=True):
-        Component.__init__(self, *subs)
-        self.strict = strict
-
-    def do(self, data, ctx, user_data) -> State:
-        return self.do_template('dict', data, ctx, user_data)
-
 class AnyDict(BTItem):
     def do(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("ANYDCIT %s" % ctx.state)
+        log("ANYDICT %s" % ctx.state)
         if ctx.state == 'enter':
             if 'dict' == data[Pos.TYPE]:
                 log("ANYDICT SUCCESS ID %d" % (id(ctx)))
@@ -215,25 +207,13 @@ class AnyDict(BTItem):
                 return ctx.set_res(State.SUCCESS)
         return ctx.set_res(State.FAILED)
 
-class Key(Pair):
+class Dict(Component, AnyDict):
+    def __init__(self, *subs, strict=True):
+        Component.__init__(self, *subs)
+        self.strict = strict
+
     def do(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("KEY %s" % ctx.state)
-        if ctx.state == 'enter':
-            ctx.init_second()
-            if ctx.second.res != State.SUCCESS:
-                res = self.second.do(data, ctx.second, user_data)
-                if res != State.SUCCESS:
-                    return ctx.set_res(res)
-            ctx.state = 'key'
-            return ctx.set_res(State.RUNNING)
-        if ctx.state == 'key':
-            if 'key' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
-                log("Match Key %r" % self.first)
-                ctx.uid = data[Pos.UID] #!!!!
-                return ctx.set_res(State.SUCCESS)
-            log("KEY FAILED")
-            return ctx.set_res(State.FAILED)
+        return self.do_template('dict', data, ctx, user_data)
 
 class AnyKey(Expr):
     def do(self, data, ctx, user_data) -> State:
@@ -256,13 +236,25 @@ class AnyKey(Expr):
             log("ANYKEY FAILED")
             return ctx.set_res(State.FAILED)
 
-class List(Component):
-    def __init__(self, *subs, strict=True):
-        Component.__init__(self, *subs)
-        self.strict = strict
-
+class Key(Pair, AnyKey):
     def do(self, data, ctx, user_data) -> State:
-        return self.do_template('list', data, ctx, user_data)
+        ctx.init_state(self)
+        log("KEY %s" % ctx.state)
+        if ctx.state == 'enter':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do(data, ctx.second, user_data)
+                if res != State.SUCCESS:
+                    return ctx.set_res(res)
+            ctx.state = 'key'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'key':
+            if 'key' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
+                log("Match Key %r" % self.first)
+                ctx.uid = data[Pos.UID] #!!!!
+                return ctx.set_res(State.SUCCESS)
+            log("KEY FAILED")
+            return ctx.set_res(State.FAILED)
 
 class AnyList(BTItem):
     def do(self, data, ctx, user_data) -> State:
@@ -276,25 +268,13 @@ class AnyList(BTItem):
         # I don't have finish
         return ctx.set_res(State.FAILED)
 
-class Idx(Pair):
+class List(Component, AnyList):
+    def __init__(self, *subs, strict=True):
+        Component.__init__(self, *subs)
+        self.strict = strict
+
     def do(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("IDX %s" % ctx.state)
-        if ctx.state == 'enter':
-            ctx.init_second()
-            if ctx.second.res != State.SUCCESS:
-                res = self.second.do(data, ctx.second, user_data)
-                if res != State.SUCCESS:
-                    return ctx.set_res(res)
-            ctx.state = 'idx'
-            return ctx.set_res(State.RUNNING)
-        if ctx.state == 'idx':
-            if 'idx' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
-                log("Match Idx %r" % self.first)
-                ctx.uid = data[Pos.UID] #!!!!!!!
-                return ctx.set_res(State.SUCCESS)
-            log("IDX FAILED")
-            return ctx.set_res(State.FAILED)
+        return self.do_template('list', data, ctx, user_data)
 
 class AnyIdx(Expr):
     def do(self, data, ctx, user_data) -> State:
@@ -317,6 +297,26 @@ class AnyIdx(Expr):
             log("ANYIDX FAILED")
             return ctx.set_res(State.FAILED)
 
+class Idx(Pair, AnyIdx):
+    def do(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("IDX %s" % ctx.state)
+        if ctx.state == 'enter':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do(data, ctx.second, user_data)
+                if res != State.SUCCESS:
+                    return ctx.set_res(res)
+            ctx.state = 'idx'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'idx':
+            if 'idx' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
+                log("Match Idx %r" % self.first)
+                ctx.uid = data[Pos.UID] #!!!!!!!
+                return ctx.set_res(State.SUCCESS)
+            log("IDX FAILED")
+            return ctx.set_res(State.FAILED)
+
 class Attrs(Component):
     def __init__(self, *subs, strict=True):
         Component.__init__(self, *subs)
@@ -324,30 +324,6 @@ class Attrs(Component):
 
     def do(self, data, ctx, user_data) -> State:
         return self.do_template('attrs', data, ctx, user_data)
-
-# TODO: AnyAttrs
-
-class Attr(Pair):
-    def do(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ATTR %s" % ctx.state)
-        if ctx.state == 'enter':
-            ctx.init_second()
-            if ctx.second.res != State.SUCCESS:
-                res = self.second.do(data, ctx.second, user_data)
-                if res != State.SUCCESS:
-                    return ctx.set_res(res)
-            ctx.state = 'attr'
-            return ctx.set_res(State.RUNNING)
-        if ctx.state == 'attr':
-            if 'attr' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
-                log("Match Attr %r" % self.first)
-                ctx.matched = self.first
-                ctx.uid = data[Pos.UID] #!!!!
-                ctx.when = data[Pos.ARG]
-                return ctx.set_res(State.SUCCESS)
-            log("ATTR FAILED")
-            return ctx.set_res(State.FAILED)
 
 class AnyAttr(Expr):
     def do(self, data, ctx, user_data) -> State:
@@ -370,20 +346,29 @@ class AnyAttr(Expr):
             log("ANYATTR FAILED")
             return ctx.set_res(State.FAILED)
 
-#####
-
-class Value(Expr):
+class Attr(Pair, AnyAttr):
     def do(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("VALUE %s" % (ctx.state))
+        log("ATTR %s" % ctx.state)
         if ctx.state == 'enter':
-            if self.expr:
-                if 'value' == data[Pos.TYPE] and data[Pos.ARG] == self.expr:
-                    log("Match Value %r" % self.expr)
-                    ctx.uid = data[Pos.UID]
-                    return ctx.set_res(State.SUCCESS)
-            log("VALUE FAILED")
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do(data, ctx.second, user_data)
+                if res != State.SUCCESS:
+                    return ctx.set_res(res)
+            ctx.state = 'attr'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'attr':
+            if 'attr' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
+                log("Match Attr %r" % self.first)
+                ctx.matched = self.first
+                ctx.uid = data[Pos.UID] #!!!!
+                ctx.when = data[Pos.ARG]
+                return ctx.set_res(State.SUCCESS)
+            log("ATTR FAILED")
             return ctx.set_res(State.FAILED)
+
+#####
 
 class AnyValue(BTItem):
     def do(self, data, ctx, user_data) -> State:
@@ -398,56 +383,20 @@ class AnyValue(BTItem):
             log("ANYVALUE FAILED")
             return ctx.set_res(State.FAILED)
 
-#####
-
-class Type(Pair):
-    def __init__(self, *subs, kindof=False):
-        if len(subs) not in [1, 2, 3, 4]:
-            raise TypeError("Type take at least one argument at most four argument")
-        self.first = subs[0]
-        self.second = None
-        self.third = None
-        self.four = None
-        self.kindof = kindof
-        if len(subs) > 1:
-            self.second = subs[1]
-        if len(subs) > 2:
-            # second must be List or Dict
-            self.third = subs[2]
-        if len(subs) > 3:
-            # second and thirs must be List or Dict
-            self.four = subs[3]
-
+class Value(Expr, AnyValue):
     def do(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("TYPE %s" % ctx.state)
+        log("VALUE %s" % (ctx.state))
         if ctx.state == 'enter':
-            ctx.uid = data[Pos.UID]
-            if self.second:
-                ctx.state = 'sub'
-            else:
-                ctx.state = 'final'
-            log("TYPE CHANGE TYPE %s" % ctx.state)
-        if ctx.state == 'sub':
-            ctx.init_second()
-            if ctx.second.res != State.SUCCESS:
-                res = self.second.do(data, ctx.second, user_data)
-                if res != State.SUCCESS:
-                    return ctx.set_res(res)
-            ctx.state = 'final'
-            return ctx.set_res(State.RUNNING)
-        if ctx.state == 'final':
-            log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
-            cmp_type = type(data[Pos.ARG]) is self.first
-            if self.kindof:
-                cmp_type = issubclass(type(data[Pos.ARG]), self.first)
-            if 'type' == data[0] and cmp_type:
-                log("Match Type %r" % self.first)
-                ctx.uid = data[Pos.UID]
-                ctx.when = type(data[Pos.ARG]).__name__
-                return ctx.set_res(State.SUCCESS)
-            log("TYPE FAILED")
+            if self.expr:
+                if 'value' == data[Pos.TYPE] and data[Pos.ARG] == self.expr:
+                    log("Match Value %r" % self.expr)
+                    ctx.uid = data[Pos.UID]
+                    return ctx.set_res(State.SUCCESS)
+            log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
+
+#####
 
 class AnyType(Expr):
     def do(self, data, ctx, user_data) -> State:
@@ -477,79 +426,87 @@ class AnyType(Expr):
             log("ANYTYPE FAILED")
             return ctx.set_res(State.FAILED)
 
-def KindOf(*subs):
-    res = Type(*subs, kindof=True)
-    return res
-
-"""
-class KindOf(Pair):
-    def __init__(self, *subs):
-        if len(subs) == 0:
-            raise TypeError("Type take at least 1 argument, and max 3")
+class Type(Pair, AnyType):
+    def __init__(self, *subs, kindof=False):
+        if len(subs) not in [1, 2, 3, 4]:
+            raise TypeError("Type take at least one argument at most four argument")
         self.first = subs[0]
-        self.subs = None
+        self.second = None ####
+        self.steps = []
+        self.kindof = kindof
         if len(subs) > 1:
-            self.subs = subs[1:]
-        # TODO: len(subs) > 3 ERROR
-        # TODO: len(subs) == 3 first -> (Any)?(List|Dict), second -> Attrs
+            self.second = subs[1] #####
+            self.steps.append(subs[1])
+        if len(subs) > 2:
+            # second must be List or Dict
+            self.steps.append(subs[2])
+            if not sum(map(lambda _: issubclass(type(self.steps[0]), _), {AnyDict, AnyList})):
+                raise TypeError("Second argument must be AnyDict or AnyList not %s" % type(self.steps[0]).__name__)
+        if len(subs) > 3:
+            # second and thirsd must be List or Dict
+            self.steps.append(subs[3])
+            if not sum(map(lambda _: issubclass(type(self.steps[1]), _), {AnyDict, AnyList})):
+                raise TypeError("Third argument must be AnyDict or AnyList not %s" % type(self.steps[1]).__name__)
 
     def do(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        # to be notifying by subs
-        ctx.matching = False
+        log("TYPE %s" % ctx.state)
         if ctx.state == 'enter':
-            # only test?
-            ctx.uid = None
-            if self.subs:
-                ctx.init_subs(self.subs)
+            ctx.uid = data[Pos.UID]
+            if self.second and len(self.steps) <= 1:###
                 ctx.state = 'sub'
-                ctx.current = 0
+            elif self.steps:
+                ctx.state = 'concurrent'
             else:
                 ctx.state = 'final'
-
-        log("KIND %s" % ctx.state)
-        log("KIND %d CTXUID %s CTXCURRENT %d/%d" % (id(ctx), repr(ctx.uid), ctx.current, len(self.subs)))
-        log("KIND CTXUID2 %s" % repr(data[Pos.UID]))
-        if (ctx.uid is not None and ctx.uid == data[Pos.UID]) or ctx.current == len(self.subs):
-            ctx.state = 'final'
+            log("TYPE CHANGE TYPE %s" % ctx.state)
         if ctx.state == 'sub':
-            # here // match
-            ctx.nbsuccess = 0
-            ctx.nbrunning = 0
-            log("LEN SUBS %d LEN CTX %d" % (len(self.subs), len(ctx.subs)))
-            sub_bt, sub_ctx = (self.subs[ctx.current], ctx.subs[ctx.current])
-            log("SUB CTX: %s" % sub_ctx.res)
-            if sub_ctx.res == State.RUNNING:
-                res = sub_bt.do(data, sub_ctx, user_data)
-            log("RES SUB CTX: %s" % sub_ctx.res)
-            # count after tick
-            if sub_ctx.res == State.RUNNING:
-                ctx.nbrunning += 1
-            if sub_ctx.res == State.SUCCESS:
-                log("SUCCESS OF %d SO %d" % (id(sub_ctx), id(ctx)))
-                ctx.current += 1
-                ctx.nbsuccess += 1
-                if ctx.uid is None:
-                    ctx.uid = sub_ctx.uid
-                    log("SUCCESS %d: %s" % (id(ctx), repr(ctx.uid)))
-                elif ctx.uid != data[Pos.UID]:
-                    ctx.nbsuccess -= 1
-                    sub_ctx.res = State.FAILED
-            if ctx.matching:
-                ctx.matching = False
-                return ctx.set_res(State.RUNNING)
-            return ctx.set_res(sub_ctx.res)
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do(data, ctx.second, user_data)
+                if res != State.SUCCESS:
+                    return ctx.set_res(res)
+            ctx.state = 'final'
+            return ctx.set_res(State.RUNNING)
+        if ctx.state == 'concurrent':
+            # todo: 2,3,4
+            log("INIT STEPS")
+            ctx.init_steps(self)
+            # faire en sequence...
+            # ...
+            for idx, child in enumerate(ctx.steps):
+                log("CHILD %d - %s" % (idx, child.res))
+                if child.res == State.RUNNING:
+                    log("S %s S %s" % (len(self.steps), len(ctx.steps)))
+                    res = self.steps[idx].do(data, child, user_data)
+            # TODO: in one pass
+            if not sum(map(lambda _: _.res == State.RUNNING, ctx.steps)):
+                tmp = list(map(lambda _: _.res, ctx.steps))
+                log("CTX STEPS %s" % tmp)
+                if (tmp == [State.SUCCESS] or
+                    tmp == [State.SUCCESS, State.SUCCESS] or
+                    tmp == [State.SUCCESS, State.FAILED, State.SUCCESS] or
+                    tmp == [State.FAILED, State.SUCCESS, State.SUCCESS]):
+                    ctx.state = 'final'
+                    return ctx.set_res(State.SUCCESS)
+                return ctx.set_res(State.FAILED)
+            return ctx.set_res(State.RUNNING)
         if ctx.state == 'final':
-            log("KINDOF %s ?? %s" % (type(data[Pos.ARG]), repr(self.first)))
-            if 'type' == data[0] and isinstance(data[Pos.ARG], self.first):
-                if self.subs and ctx.nbsuccess == 0:
-                    return ctx.set_res(State.FAILED)
+            log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
+            cmp_type = type(data[Pos.ARG]) is self.first
+            if self.kindof:
+                cmp_type = issubclass(type(data[Pos.ARG]), self.first)
+            if 'type' == data[0] and cmp_type:
                 log("Match Type %r" % self.first)
+                ctx.uid = data[Pos.UID]
+                ctx.when = type(data[Pos.ARG]).__name__
                 return ctx.set_res(State.SUCCESS)
-            log("KIND FAILED")
+            log("TYPE FAILED")
             return ctx.set_res(State.FAILED)
-####
-"""
+
+def KindOf(*subs):
+    res = Type(*subs, kindof=True)
+    return res
 
 class Ancestor(Pair):
     def __init__(self, first, second, depth=1, strict=True):
