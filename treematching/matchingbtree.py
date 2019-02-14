@@ -62,7 +62,7 @@ def walk(tree, uid=[(0, 0)]) -> object:
             yield ('attrs', attrs, 4, uid)
     # value
     # only for scalar
-    scalar_type = {int, float, str, bytes}
+    scalar_type = {int, float, str, bytes, bool}
     if type(tree) in scalar_type:
         yield ('value', tree, 5, uid)
     # type

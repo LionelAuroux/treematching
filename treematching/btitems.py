@@ -472,25 +472,52 @@ class Type(Pair, AnyType):
             # todo: 2,3,4
             log("INIT STEPS")
             ctx.init_steps(self)
-            # faire en sequence...
-            # ...
-            for idx, child in enumerate(ctx.steps):
-                log("CHILD %d - %s" % (idx, child.res))
-                if child.res == State.RUNNING:
-                    log("S %s S %s" % (len(self.steps), len(ctx.steps)))
-                    res = self.steps[idx].do(data, child, user_data)
-            # TODO: in one pass
-            if not sum(map(lambda _: _.res == State.RUNNING, ctx.steps)):
-                tmp = list(map(lambda _: _.res, ctx.steps))
-                log("CTX STEPS %s" % tmp)
-                if (tmp == [State.SUCCESS] or
-                    tmp == [State.SUCCESS, State.SUCCESS] or
-                    tmp == [State.SUCCESS, State.FAILED, State.SUCCESS] or
-                    tmp == [State.FAILED, State.SUCCESS, State.SUCCESS]):
-                    ctx.state = 'final'
-                    return ctx.set_res(State.SUCCESS)
-                return ctx.set_res(State.FAILED)
-            return ctx.set_res(State.RUNNING)
+            # each ctx.steps[X].res in set inside the do thru the callee ctx.set_res
+            if len(ctx.steps) == 1:
+                if ctx.steps[0].res != State.SUCCESS:
+                    res = self.steps[0].do(data, ctx.steps[0], user_data)
+                    if res != State.SUCCESS:
+                        return ctx.set_res(res)
+                ctx.state = 'final'
+                return ctx.set_res(State.RUNNING)
+            elif len(ctx.steps) == 2:
+                if ctx.steps[0].res != State.SUCCESS:
+                    res = self.steps[0].do(data, ctx.steps[0], user_data)
+                    if res != State.SUCCESS:
+                        return ctx.set_res(res)
+                    return ctx.set_res(State.RUNNING)
+                if ctx.steps[1].res != State.SUCCESS:
+                    res = self.steps[1].do(data, ctx.steps[1], user_data)
+                    if res != State.SUCCESS:
+                        return ctx.set_res(res)
+                ctx.state = 'final'
+                return ctx.set_res(State.RUNNING)
+            elif len(ctx.steps) == 3:
+                log("HERE COME STEP3")
+                # concurrent match on the 2 first
+                subls = list(map(lambda _: _.res, ctx.steps))[0:2]
+                log("SUBLS %s" % subls)
+                if subls != [State.SUCCESS, State.FAILED] and subls != [State.FAILED, State.SUCCESS]:
+                    for idx, child in list(enumerate(ctx.steps))[0:2]:
+                        log("PING %d" % idx)
+                        res = self.steps[idx].do(data, child, user_data)
+                    subls = list(map(lambda _: _.res, ctx.steps))[0:2]
+                    log("SUBLS2 %s" % subls)
+                    if subls == [State.FAILED, State.FAILED]:
+                        log("2FAILED")
+                        return ctx.set_res(State.FAILED)
+                    # still RUNNING if matched or subpart RUNNING
+                    log("1RUNNING")
+                    return ctx.set_res(State.RUNNING)
+                log("STEP3 %s" % ctx.steps[2].res)
+                if ctx.steps[2].res != State.SUCCESS:
+                    log("DO STEP3")
+                    res = self.steps[2].do(data, ctx.steps[2], user_data)
+                    if res != State.SUCCESS:
+                        return ctx.set_res(res)
+                log("STEP3 FINAL")
+                ctx.state = 'final'
+                return ctx.set_res(State.RUNNING)
         if ctx.state == 'final':
             log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
             cmp_type = type(data[Pos.ARG]) is self.first

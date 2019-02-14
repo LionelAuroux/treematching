@@ -475,6 +475,7 @@ class TestBTP(unittest.TestCase):
         class Sub3(Base, Dummy):
             pass
 
+        # TODO: when we provide only one Attrs, AnyList or AnyDict must failed
         bt = Capture('a', KindOf(Base,
                     Attrs(
                         Attr('flags', AnyType(AnyValue())),
@@ -488,11 +489,16 @@ class TestBTP(unittest.TestCase):
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
         match = e.match(tree)
-        self.assertEqual(len(match), 2, "Failed to match a KindOf")
-        self.assertEqual(match[0].capture['a'].flags, 12, "Failed to match a KindOf")
-        self.assertIs(type(match[0].capture['a']), Sub3, "Failed to match a KindOf")
-        self.assertEqual(match[1].capture['a'].flags, 'toto', "Failed to match a KindOf")
-        self.assertIs(type(match[1].capture['a']), Sub1, "Failed to match a KindOf")
+        log_on()
+        log_json(match)
+        log_off()
+        self.assertEqual(len(match), 3, "Failed to match a KindOf")
+        self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
+        self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
+        self.assertEqual(match[1].capture['a'].flags, 12, "Failed to match a KindOf")
+        self.assertIs(type(match[1].capture['a']), Sub3, "Failed to match a KindOf")
+        self.assertEqual(match[2].capture['a'].flags, 'toto', "Failed to match a KindOf")
+        self.assertIs(type(match[2].capture['a']), Sub1, "Failed to match a KindOf")
         bt = Capture('a', KindOf(Base,
                         AnyList(),
                         AnyDict(),
@@ -517,8 +523,12 @@ class TestBTP(unittest.TestCase):
             log_json(match)
         finally:
             log_off()
+        # TODO: 2!
         self.assertEqual(len(match), 1, "Failed to match a KindOf")
-        self.assertEqual(match[0].capture['a'].flags, 'toto', "Failed to match a KindOf")
+        self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
+        self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
+        #self.assertEqual(match[1].capture['a'].flags, 'toto', "Failed to match a KindOf")
+        #self.assertIs(type(match[1].capture['a']), Sub1, "Failed to match a KindOf")
         bt = Capture('a', KindOf(Base,
                         AnyDict(),
                         Attrs(
