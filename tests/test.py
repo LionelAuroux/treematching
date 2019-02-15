@@ -152,17 +152,17 @@ class TestBTP(unittest.TestCase):
         """
         bt = Type(A,
                     Attrs(
-                        Attr('c', Type(str, Value('lala'))),
-                        Attr('b', Type(str, Value('toto'))),
-                        Attr('a', Type(int, Value(32))),
+                        Attr('g', Type(str, Value('lala'))),
+                        Attr('f', Type(str, Value('toto'))),
+                        Attr('e', Type(int, Value(32))),
                         strict=False
                     )
             )
         e = MatchingBTree(bt)
-        tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
+        tree = {'cool': [B(e=32, f='toto', g='lala'), C(v=A(e=32, f='toto', g='lala', a=13)), A(e=32, f='toto', g='lala', d=12, a=15)]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
-        tree = {A(a=32, b='toto', c='lala', d=A(a=32, b='toto', c='lala', d=A(a=32, b='toto', c='lala'))), A()}
+        tree = {A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', a=16))), A()}
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict attrs")
         # empty
@@ -489,9 +489,7 @@ class TestBTP(unittest.TestCase):
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
         match = e.match(tree)
-        log_on()
-        log_json(match)
-        log_off()
+
         self.assertEqual(len(match), 3, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
         self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
@@ -508,29 +506,44 @@ class TestBTP(unittest.TestCase):
                         ),
                    )
             )
-        #log_on()
-        #log_json(bt)
-        #log_off()
         e = MatchingBTree(bt)
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        log_on()
-        try:
-            match = e.match(tree)
-            log_json(match)
-        finally:
-            log_off()
+        match = e.match(tree)
         # TODO: 2!
         self.assertEqual(len(match), 1, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
         self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
         #self.assertEqual(match[1].capture['a'].flags, 'toto', "Failed to match a KindOf")
         #self.assertIs(type(match[1].capture['a']), Sub1, "Failed to match a KindOf")
+
+        # TODO: Any??
         bt = Capture('a', KindOf(Base,
                         AnyDict(),
+                        Attrs(
+                            Attr('flags', AnyType(AnyValue())),
+                            strict=False
+                        )
+                    )
+            )
+        e = MatchingBTree(bt)
+        tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True, b=13),
+                        Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
+                        Sub1([12, 14, 16], flags='toto', a=12)],
+            'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
+            }
+        log_on()
+        match = e.match(tree)
+        log_off()
+        #self.assertEqual(len(match), 1, "Failed to match a KindOf")
+        #self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
+        #self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
+        
+        bt = Capture('a', KindOf(Base,
+                        AnyList(),
                         Attrs(
                             Attr('flags', AnyType(AnyValue())),
                             strict=False
@@ -543,9 +556,13 @@ class TestBTP(unittest.TestCase):
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
+        log_on()
         match = e.match(tree)
-        self.assertEqual(len(match), 1, "Failed to match a KindOf")
-        self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
+        log_off()
+        #self.assertEqual(len(match), 1, "Failed to match a KindOf")
+        #self.assertEqual(match[0].capture['a'].flags, 'toto', "Failed to match a KindOf")
+        #self.assertIs(type(match[0].capture['a']), Sub1, "Failed to match a KindOf")
+
 
     def test_13(self):
         """

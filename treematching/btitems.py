@@ -108,6 +108,7 @@ class Component(BTItem):
                         # reset
                         sub_ctx.reset_tree()
                 return ctx.set_res(State.RUNNING)
+            log("FAILED TO RESET")
             return ctx.set_res(State.FAILED)
 
 ##########
@@ -475,21 +476,28 @@ class Type(Pair, AnyType):
             # each ctx.steps[X].res in set inside the do thru the callee ctx.set_res
             if len(ctx.steps) == 1:
                 if ctx.steps[0].res != State.SUCCESS:
+                    log("TRY FIRST")
                     res = self.steps[0].do(data, ctx.steps[0], user_data)
+                    log("FIRST %s" % res)
                     if res != State.SUCCESS:
                         return ctx.set_res(res)
+                log("SUCCESS FIRST")
                 ctx.state = 'final'
                 return ctx.set_res(State.RUNNING)
             elif len(ctx.steps) == 2:
                 if ctx.steps[0].res != State.SUCCESS:
+                    log("TRY PAIR")
                     res = self.steps[0].do(data, ctx.steps[0], user_data)
+                    log("PAIR %s" % ctx.steps[0].res)
                     if res != State.SUCCESS:
                         return ctx.set_res(res)
                     return ctx.set_res(State.RUNNING)
+                log("PAIR SECOND %s" % ctx.steps[0].res)
                 if ctx.steps[1].res != State.SUCCESS:
                     res = self.steps[1].do(data, ctx.steps[1], user_data)
                     if res != State.SUCCESS:
                         return ctx.set_res(res)
+                log("PAIR SET TO FINAL")
                 ctx.state = 'final'
                 return ctx.set_res(State.RUNNING)
             elif len(ctx.steps) == 3:
