@@ -13,10 +13,10 @@ class BTItem:
     Base class for all items of a pattern
     """
     def do_up(self, data, ctx, user_data) -> State:
-        raise RuntimeError("must be implemented")
+        raise RuntimeError("%s.do_up must be implemented" % type(self).__name__)
 
     def do_down(self, data, ctx, user_data) -> State:
-        raise RuntimeError("must be implemented")
+        raise RuntimeError("%s.do_down must be implemented" % type(self).__name__)
 
     def __repr__(self) -> str:
         txt = type(self).__name__
@@ -206,7 +206,8 @@ class Component(BTItem):
                 if sub_ctx.res == State.RUNNING:
                     ctx.nbrunning += 1
                 # partial match
-                if sub_ctx.res == State.SUCCESS:
+                if sub_ctx.res == State.SUCCESS and ctx.uid == sub_ctx.uid[:-1]:
+                    log("UID CMP %s ?? %s" % (ctx.uid, sub_ctx.uid))
                     ctx.nbsuccess |= {id(sub_ctx)}
             log("RUNNING/NBSUCCESS %s - %s" % (ctx.nbrunning, ctx.nbsuccess))
             if ctx.nbrunning or len(ctx.nbsuccess) != len(self.subs):
@@ -236,17 +237,19 @@ class Capture(Pair):
         return ctx.set_res(State.SUCCESS)
 
     def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
         root = ctx.getroot()
-        root.init_capture()
-        ctx.init_second()
-        log("CAPTURE SECOND %d" % id(ctx.second))
-        res = self.second.do_down(data, ctx.second, user_data)
-        log("CAPTURE RES: %s ID %d" % (res, id(ctx.second)))
-        if res != State.SUCCESS:
+        if ctx.state == 'enter':
+            root.init_capture()
+            log("DOWN CAPTURE %s" % self.first)
+            root.capture[self.first] = data[Pos.ARG]
+            ctx.state = 'final'
+        if ctx.state == 'final':
+            ctx.init_second()
+            log("DOWN CAPTURE SECOND %d" % id(ctx.second))
+            res = self.second.do_down(data, ctx.second, user_data)
+            log("DOWN CAPTURE RES: %s ID %d" % (res, id(ctx.second)))
             return ctx.set_res(res)
-        log("CAPTURE %s" % self.first)
-        root.capture[self.first] = data[Pos.ARG]
-        return ctx.set_res(State.SUCCESS)
 
 class Hook(Pair):
     def do_up(self, data, ctx, user_data) -> State:
@@ -261,6 +264,23 @@ class Hook(Pair):
         if self.first(root.capture, user_data):
             root.nb_modif += 1
         return ctx.set_res(State.SUCCESS)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        root = ctx.getroot()
+        if ctx.state == 'enter':
+            root.init_capture()
+            ctx.state = 'final'
+        if ctx.state == 'final':
+            ctx.init_second()
+            res = self.second.do_down(data, ctx.second, user_data)
+            if res != State.SUCCESS:
+                return ctx.set_res(res)
+            log("HOOK %s" % self.first)
+            ## hook must return if a modification was done in the hook -> fixpoint
+            if self.first(root.capture, user_data):
+                root.nb_modif += 1
+            return ctx.set_res(State.SUCCESS)
 
 class Event(Pair):
     def do_up(self, data, ctx, user_data) -> State:
@@ -278,6 +298,16 @@ class Event(Pair):
 
 class AnyDict(BTItem):
     def do_up(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("ANYDICT %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'dict' == data[Pos.TYPE]:
+                log("ANYDICT SUCCESS ID %d" % (id(ctx)))
+                ctx.uid = data[Pos.UID] #!!!!!
+                return ctx.set_res(State.SUCCESS)
+        return ctx.set_res(State.FAILED)
+
+    def do_down(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
         log("ANYDICT %s" % ctx.state)
         if ctx.state == 'enter':
@@ -317,6 +347,27 @@ class AnyKey(Expr):
                 ctx.uid = data[Pos.UID]
                 return ctx.set_res(State.SUCCESS)
             log("ANYKEY FAILED")
+            return ctx.set_res(State.FAILED)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("ANYKEY %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'key' == data[Pos.TYPE]:
+                log("Match AnyKey")
+                ctx.uid = data[Pos.UID]
+                ctx.when = data[Pos.ARG]
+                if self.expr:
+                    ctx.state = 'key'
+                    return ctx.set_res(State.RUNNING)
+                return ctx.set_res(State.SUCCESS)
+            log("ANYKEY FAILED")
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'key':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.expr.do_down(data, ctx.second, user_data)
+                return ctx.set_res(res)
             return ctx.set_res(State.FAILED)
 
 class Key(Pair, AnyKey):
@@ -371,6 +422,17 @@ class AnyList(BTItem):
         # I don't have finish
         return ctx.set_res(State.FAILED)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("ANYLIST %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'list' == data[Pos.TYPE]:
+                log("ANYLIST SUCCESS ID %d" % (id(ctx)))
+                ctx.uid = data[Pos.UID]
+                return ctx.set_res(State.SUCCESS)
+        # I don't have finish
+        return ctx.set_res(State.FAILED)
+
 class List(Component, AnyList):
     def __init__(self, *subs, strict=True):
         Component.__init__(self, *subs)
@@ -401,6 +463,27 @@ class AnyIdx(Expr):
                 ctx.uid = data[Pos.UID] #!!!!!
                 return ctx.set_res(State.SUCCESS)
             log("ANYIDX FAILED")
+            return ctx.set_res(State.FAILED)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("ANYIDX %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'idx' == data[Pos.TYPE]:
+                log("Match AnyIdx")
+                ctx.uid = data[Pos.UID] #!!!!!
+                ctx.what = data[Pos.ARG]
+                if self.expr:
+                    ctx.state = 'idx'
+                    return ctx.set_res(State.RUNNING)
+                return ctx.set_res(State.SUCCESS)
+            log("ANYIDX FAILED")
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'idx':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.expr.do_down(data, ctx.second, user_data)
+                return ctx.set_res(res)
             return ctx.set_res(State.FAILED)
 
 class Idx(Pair, AnyIdx):
@@ -487,6 +570,27 @@ class AnyAttr(Expr):
             log("ANYATTR FAILED")
             return ctx.set_res(State.FAILED)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("ANYATTR %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'attr' == data[Pos.TYPE]:
+                log("Match AnyAttr")
+                ctx.uid = data[Pos.UID] #!!!
+                ctx.when = data[Pos.ARG]
+                if self.expr:
+                    ctx.state = 'attr'
+                    return ctx.set_res(State.RUNNING)
+                return ctx.set_res(State.SUCCESS)
+            log("ANYATTR FAILED")
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'attr':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.expr.do_down(data, ctx.second, user_data)
+                return ctx.set_res(res)
+            return ctx.set_res(State.FAILED)
+
 class Attr(Pair, AnyAttr):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
@@ -513,7 +617,6 @@ class Attr(Pair, AnyAttr):
         ctx.init_state(self)
         log("ATTR %s" % ctx.state)
         if ctx.state == 'enter':
-            ctx.init_second()
             if 'attr' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
                 log("Match Attr %r" % self.first)
                 ctx.matched = self.first
@@ -524,9 +627,11 @@ class Attr(Pair, AnyAttr):
             log("ATTR FAILED")
             return ctx.set_res(State.FAILED)
         if ctx.state == 'attr':
+            ctx.init_second()
             if ctx.second.res != State.SUCCESS:
                 res = self.second.do_down(data, ctx.second, user_data)
                 return ctx.set_res(res)
+            return ctx.set_res(State.FAILED)
 
 ############
 
@@ -564,6 +669,7 @@ class Value(Expr, AnyValue):
                 if 'value' == data[Pos.TYPE] and data[Pos.ARG] == self.expr:
                     log("Match Value %r" % self.expr)
                     ctx.uid = data[Pos.UID]
+                    ctx.when = data[Pos.ARG]
                     return ctx.set_res(State.SUCCESS)
             log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
@@ -576,6 +682,7 @@ class Value(Expr, AnyValue):
                 if 'value' == data[Pos.TYPE] and data[Pos.ARG] == self.expr:
                     log("Match Value %r" % self.expr)
                     ctx.uid = data[Pos.UID]
+                    ctx.when = data[Pos.ARG]
                     return ctx.set_res(State.SUCCESS)
             log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
@@ -843,6 +950,46 @@ class Ancestor(Pair):
             return ctx.set_res(State.FAILED)
         return ctx.set_res(State.RUNNING)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        ctx.init_first()
+        ctx.init_second()
+        log("Ancestor %s" % ctx.state)
+        if ctx.state == 'enter':
+            log("Ancestor begin search")
+            res = self.first.do_down(data, ctx.first, user_data)
+            log("Ancestor search %s" % res)
+            if res == State.SUCCESS:
+                log("TD Ancestor found %s" % res)
+                ctx.state = 'final'
+                ctx.uid = data[Pos.UID]
+                return ctx.set_res(State.RUNNING)
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'final':
+            # check depth
+            new_end = len(ctx.uid)
+            res = self.second.do_down(data, ctx.second, user_data)
+            if res != State.SUCCESS:
+                # wait children
+                if ctx.uid == data[Pos.UID][:new_end]:
+                    log("Ancestor reset none matching childs")
+                    ctx.second.reset_tree()
+                    return ctx.set_res(State.RUNNING)
+                # it's not a children, failed
+                log("Ancestor submatch %s" % res)
+                return ctx.set_res(State.FAILED)
+            log("Ancestor Found Child")
+            log("Ancestor check %s : %s" % (ctx.uid, data[Pos.UID][:new_end]))
+            if ctx.uid == data[Pos.UID][:new_end]:
+                # strict depth?
+                if len(data[Pos.UID]) == new_end + self.depth or (not self.strict and len(data[Pos.UID]) >= new_end + self.depth):
+                    return ctx.set_res(State.SUCCESS)
+                # too near reset first part
+                elif len(data[Pos.UID]) < new_end + self.depth:
+                    ctx.second.reset_tree()
+                    return ctx.set_res(State.RUNNING)
+        return ctx.set_res(State.FAILED)
+
 class Sibling(BTItem):
     def __init__(self, *subs, strict=True):
         """
@@ -884,6 +1031,49 @@ class Sibling(BTItem):
                 return ctx.set_res(State.SUCCESS)
             # I don't have finish
             log("CHECK SIBLING %d: %s & nbsuccess %d & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
+            # on a partial match, resync the failed
+            if ctx.matching or ctx.nbrunning or ctx.nbsuccess:
+                log("Need TO RESET")
+                for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
+                    if sub_ctx.res == State.FAILED:
+                        log("RESET %d" % id(sub_ctx))
+                        # reset
+                        sub_ctx.reset_tree()
+                return ctx.set_res(State.RUNNING)
+            return ctx.set_res(State.FAILED)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        # to be notifying by subs
+        ctx.matching = False
+        if not hasattr(ctx, 'nbsuccess'):
+            ctx.nbsuccess = 0
+        log("Sibling %s" % ctx.state)
+        if ctx.state == 'enter':
+            ctx.state = 'subs'
+            ctx.init_subs(self.subs)
+        if ctx.state == 'subs':
+            log("COMPONENT [%s]" % repr(data))
+            # here // match
+            ctx.nbsuccess = set()
+            ctx.nbrunning = 0
+            for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
+                # tick only running BT
+                if sub_ctx.res == State.RUNNING:
+                    # deeper function could modify the current ctx.matching
+                    res = sub_bt.do_down(data, sub_ctx, user_data)
+                # count after tick
+                if sub_ctx.res == State.RUNNING:
+                    ctx.nbrunning += 1
+                if sub_ctx.res == State.SUCCESS:
+                    log("SUBS OK")
+                    ctx.nbsuccess |= {id(sub_ctx)}
+            # I have finish
+            if len(ctx.nbsuccess) == len(self.subs):
+                # TODO: need to check uid
+                return ctx.set_res(State.SUCCESS)
+            # I don't have finish
+            log("CHECK SIBLING %d: %s & nbsuccess %s & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
             # on a partial match, resync the failed
             if ctx.matching or ctx.nbrunning or ctx.nbsuccess:
                 log("Need TO RESET")
