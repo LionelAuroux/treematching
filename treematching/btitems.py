@@ -122,28 +122,29 @@ class Component(BTItem):
         ctx.init_state(self)
         # to be notifying by subs
         ctx.matching = False
-        if not hasattr(ctx, 'nbsuccess'):
-            ctx.nbsuccess = 0
         log("%s %s" % (t.upper(), ctx.state))
         if ctx.state == 'enter':
             ctx.state = t
             ctx.init_subs(self.subs)
+            ctx.nbsuccess = set()
         if ctx.state == t:
             log("COMPONENT %s: [%s]" % (t, data))
-            # calcul if we have finish
+            # calcul if we have finish ##
             if t == data[Pos.TYPE] and (not hasattr(ctx, 'uid') or data[Pos.UID] == ctx.uid):
                 log("data[UID]: %s" % data[Pos.UID])
-                log("LEN: %d ?? %d ?? %d" % (ctx.nbsuccess, len(self.subs), len(data[Pos.ARG])))
-                if ctx.nbsuccess == len(self.subs):
+                log("LEN: %s ?? %d ?? %d" % (ctx.nbsuccess, len(self.subs), len(data[Pos.ARG])))
+                if len(ctx.nbsuccess) == len(self.subs):
                     # strict
                     if self.strict and len(self.subs) != len(data[Pos.ARG]):
                         return ctx.set_res(State.FAILED)
                     log("Match %s" % t.upper())
                     return ctx.set_res(State.SUCCESS)
                 return ctx.set_res(State.FAILED)
+            # out directly for Any* 
+            if self.isany:
+                return ctx.set_res(State.RUNNING)
             log("check subs")
             # here // match
-            ctx.nbsuccess = 0
             ctx.nbrunning = 0
             for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
                 # tick only running BT
@@ -164,12 +165,12 @@ class Component(BTItem):
                         log("NOT AT THE LEVEL %s ?? %s" % (ctx.uid, sub_ctx.uid[:-1]))
                         sub_ctx.reset_tree()
                     else:
-                        ctx.nbsuccess += 1
+                        ctx.nbsuccess |= {id(sub_ctx)}
             # I don't have finish
-            log("CHECK MATCHING %d: %s & nbsuccess %d & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
+            log("CHECK MATCHING %d: %s & nbsuccess %s & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
             # on a partial match, resync the failed
             #if ctx.matching or ctx.nbrunning or ctx.nbsuccess:
-            if ctx.nbrunning or ctx.nbsuccess:
+            if ctx.nbrunning or len(ctx.nbsuccess):
                 log("Need TO RESET")
                 for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
                     if sub_ctx.res == State.FAILED:
@@ -189,15 +190,17 @@ class Component(BTItem):
         if ctx.state == t:
             log("COMPONENT %s: [%s]" % (t, data))
             # calcul if we could begin
-            if t == data[Pos.TYPE]:
+            if t == data[Pos.TYPE]: ##
                 # strict
                 if self.strict and len(self.subs) != len(data[Pos.ARG]):
                     return ctx.set_res(State.FAILED)
                 ctx.uid = data[Pos.UID]
-                ctx.state = 'final'
-                ctx.nbsuccess = set()
-                log("Match %s" % t.upper())
-                return ctx.set_res(State.RUNNING)
+                if not self.isany:
+                    ctx.state = 'final'
+                    ctx.nbsuccess = set()
+                    log("Match %s" % t.upper())
+                    return ctx.set_res(State.RUNNING)
+                return ctx.set_res(State.SUCCESS)
             return ctx.set_res(State.FAILED)
         if ctx.state == 'final':
             # // match
@@ -300,33 +303,15 @@ class Event(Pair):
 
 ############
 
-class AnyDict(BTItem):
-    def do_up(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYDICT %s" % ctx.state)
-        if ctx.state == 'enter':
-            if 'dict' == data[Pos.TYPE]:
-                log("ANYDICT SUCCESS ID %d" % (id(ctx)))
-                ctx.uid = data[Pos.UID] #!!!!!
-                return ctx.set_res(State.SUCCESS)
-        return ctx.set_res(State.FAILED)
-
-    def do_down(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYDICT %s" % ctx.state)
-        if ctx.state == 'enter':
-            if 'dict' == data[Pos.TYPE]:
-                log("ANYDICT SUCCESS ID %d" % (id(ctx)))
-                ctx.uid = data[Pos.UID] #!!!!!
-                return ctx.set_res(State.SUCCESS)
-        return ctx.set_res(State.FAILED)
-
-class Dict(Component, AnyDict):
+class Dict(Component):
     def do_up(self, data, ctx, user_data) -> State:
         return self.do_up_template('dict', data, ctx, user_data)
 
     def do_down(self, data, ctx, user_data) -> State:
         return self.do_down_template('dict', data, ctx, user_data)
+
+def AnyDict():
+    return Dict(isany=True)
 
 ############
 
@@ -377,35 +362,15 @@ def AnyKey(expr=None):
 
 ############
 
-class AnyList(BTItem):
-    def do_up(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYLIST %s" % ctx.state)
-        if ctx.state == 'enter':
-            if 'list' == data[Pos.TYPE]:
-                log("ANYLIST SUCCESS ID %d" % (id(ctx)))
-                ctx.uid = data[Pos.UID]
-                return ctx.set_res(State.SUCCESS)
-        # I don't have finish
-        return ctx.set_res(State.FAILED)
-
-    def do_down(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYLIST %s" % ctx.state)
-        if ctx.state == 'enter':
-            if 'list' == data[Pos.TYPE]:
-                log("ANYLIST SUCCESS ID %d" % (id(ctx)))
-                ctx.uid = data[Pos.UID]
-                return ctx.set_res(State.SUCCESS)
-        # I don't have finish
-        return ctx.set_res(State.FAILED)
-
-class List(Component, AnyList):
+class List(Component):
     def do_up(self, data, ctx, user_data) -> State:
         return self.do_up_template('list', data, ctx, user_data)
 
     def do_down(self, data, ctx, user_data) -> State:
         return self.do_down_template('list', data, ctx, user_data)
+
+def AnyList():
+    return List(isany=True)
 
 ############
 
@@ -622,13 +587,13 @@ class Type(Pair, AnyType):
         if len(subs) > 2:
             # second must be List or Dict
             self.steps.append(subs[2])
-            if not sum(map(lambda _: issubclass(type(self.steps[0]), _), {AnyDict, AnyList})):
-                raise TypeError("Second argument must be AnyDict or AnyList not %s" % type(self.steps[0]).__name__)
+            if not sum(map(lambda _: issubclass(type(self.steps[0]), _), {Dict, List})):
+                raise TypeError("Second argument must be Dict or List not %s" % type(self.steps[0]).__name__)
         if len(subs) > 3:
             # second and thirsd must be List or Dict
             self.steps.append(subs[3])
-            if not sum(map(lambda _: issubclass(type(self.steps[1]), _), {AnyDict, AnyList})):
-                raise TypeError("Third argument must be AnyDict or AnyList not %s" % type(self.steps[1]).__name__)
+            if not sum(map(lambda _: issubclass(type(self.steps[1]), _), {Dict, List})):
+                raise TypeError("Third argument must be Dict or List not %s" % type(self.steps[1]).__name__)
 
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
@@ -876,16 +841,14 @@ class Sibling(BTItem):
         ctx.init_state(self)
         # to be notifying by subs
         ctx.matching = False
-        if not hasattr(ctx, 'nbsuccess'):
-            ctx.nbsuccess = 0
         log("Sibling %s" % ctx.state)
         if ctx.state == 'enter':
             ctx.state = 'subs'
             ctx.init_subs(self.subs)
+            ctx.nbsuccess = set()
         if ctx.state == 'subs':
             log("COMPONENT [%s]" % repr(data))
             # here // match
-            ctx.nbsuccess = 0
             ctx.nbrunning = 0
             for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
                 # tick only running BT
@@ -897,15 +860,15 @@ class Sibling(BTItem):
                     ctx.nbrunning += 1
                 if sub_ctx.res == State.SUCCESS:
                     log("SUBS OK")
-                    ctx.nbsuccess += 1
+                    ctx.nbsuccess |= {id(sub_ctx)}
             # I have finish
-            if ctx.nbsuccess == len(self.subs):
+            if len(ctx.nbsuccess) == len(self.subs):
                 # TODO: need to check uid
                 return ctx.set_res(State.SUCCESS)
             # I don't have finish
-            log("CHECK SIBLING %d: %s & nbsuccess %d & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
+            log("CHECK SIBLING %d: %s & nbsuccess %s & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
             # on a partial match, resync the failed
-            if ctx.matching or ctx.nbrunning or ctx.nbsuccess:
+            if ctx.matching or ctx.nbrunning or len(ctx.nbsuccess):
                 log("Need TO RESET")
                 for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
                     if sub_ctx.res == State.FAILED:
@@ -919,16 +882,14 @@ class Sibling(BTItem):
         ctx.init_state(self)
         # to be notifying by subs
         ctx.matching = False
-        if not hasattr(ctx, 'nbsuccess'):
-            ctx.nbsuccess = 0
         log("Sibling %s" % ctx.state)
         if ctx.state == 'enter':
             ctx.state = 'subs'
             ctx.init_subs(self.subs)
+            ctx.nbsuccess = set()
         if ctx.state == 'subs':
             log("COMPONENT [%s]" % repr(data))
             # here // match
-            ctx.nbsuccess = set()
             ctx.nbrunning = 0
             for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
                 # tick only running BT
