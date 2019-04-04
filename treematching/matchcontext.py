@@ -142,6 +142,9 @@ class MatchContext:
             self.first.reset_tree()
         if hasattr(self, 'second'):
             self.second.reset_tree()
+        if hasattr(self, 'steps'):
+            for s in self.steps:
+                s.reset_tree()
         if hasattr(self, 'subs'):
             for s in self.subs:
                 s.reset_tree()
