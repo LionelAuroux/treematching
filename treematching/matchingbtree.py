@@ -120,9 +120,10 @@ def walk_bottomup(tree, uid=[(0, 0)]) -> object:
     yield ('type', tree, 6, uid)
 
 class MatchingBTree:
-    def __init__(self, bt):
+    def __init__(self, bt, direction=MatchDirection.BOTTOM_UP):
         self.state = State.RUNNING
         self.bt = bt
+        self.direction = direction
 
     def do_up(self, data, ctx, user_data) -> State:
         log("MatchingBTree UP")
@@ -132,12 +133,12 @@ class MatchingBTree:
         log("MatchingBTree DOWN")
         return self.bt.do_down(data, ctx, user_data)
 
-    def match(self, tree, user_data=None, direction=MatchDirection.BOTTOM_UP):
+    def match(self, tree, user_data=None):
         glist = []
         match = []
         walk = walk_bottomup
         do_bt = self.do_up
-        if direction == MatchDirection.TOP_DOWN:
+        if self.direction == MatchDirection.TOP_DOWN:
             walk = walk_topdown
             do_bt = self.do_down
         for idx, it in enumerate(walk(tree)):

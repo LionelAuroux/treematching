@@ -235,6 +235,19 @@ class Capture(Pair):
         root.capture[self.first] = data[Pos.ARG]
         return ctx.set_res(State.SUCCESS)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        root = ctx.getroot()
+        root.init_capture()
+        ctx.init_second()
+        log("CAPTURE SECOND %d" % id(ctx.second))
+        res = self.second.do_down(data, ctx.second, user_data)
+        log("CAPTURE RES: %s ID %d" % (res, id(ctx.second)))
+        if res != State.SUCCESS:
+            return ctx.set_res(res)
+        log("CAPTURE %s" % self.first)
+        root.capture[self.first] = data[Pos.ARG]
+        return ctx.set_res(State.SUCCESS)
+
 class Hook(Pair):
     def do_up(self, data, ctx, user_data) -> State:
         root = ctx.getroot()
@@ -282,6 +295,9 @@ class Dict(Component, AnyDict):
     def do_up(self, data, ctx, user_data) -> State:
         return self.do_up_template('dict', data, ctx, user_data)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        return self.do_down_template('dict', data, ctx, user_data)
+
 class AnyKey(Expr):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
@@ -323,6 +339,24 @@ class Key(Pair, AnyKey):
             log("KEY FAILED")
             return ctx.set_res(State.FAILED)
 
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("KEY %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'key' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
+                log("Match Key %r" % self.first)
+                ctx.uid = data[Pos.UID] #!!!!
+                ctx.state = 'key'
+                return ctx.set_res(State.RUNNING)
+            log("KEY FAILED")
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'key':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do_down(data, ctx.second, user_data)
+                return ctx.set_res(res)
+            return ctx.set_res(State.FAILED)
+
 ############
 
 class AnyList(BTItem):
@@ -344,6 +378,9 @@ class List(Component, AnyList):
 
     def do_up(self, data, ctx, user_data) -> State:
         return self.do_up_template('list', data, ctx, user_data)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        return self.do_down_template('list', data, ctx, user_data)
 
 class AnyIdx(Expr):
     def do_up(self, data, ctx, user_data) -> State:
@@ -384,6 +421,24 @@ class Idx(Pair, AnyIdx):
                 ctx.uid = data[Pos.UID] #!!!!!!!
                 return ctx.set_res(State.SUCCESS)
             log("IDX FAILED")
+            return ctx.set_res(State.FAILED)
+
+    def do_down(self, data, ctx, user_data) -> State:
+        ctx.init_state(self)
+        log("IDX %s" % ctx.state)
+        if ctx.state == 'enter':
+            if 'idx' == data[Pos.TYPE] and data[Pos.ARG] == self.first:
+                log("Match Idx %r" % self.first)
+                ctx.uid = data[Pos.UID] #!!!!!!!
+                ctx.state = 'idx'
+                return ctx.set_res(State.RUNNING)
+            log("IDX FAILED")
+            return ctx.set_res(State.FAILED)
+        if ctx.state == 'idx':
+            ctx.init_second()
+            if ctx.second.res != State.SUCCESS:
+                res = self.second.do_down(data, ctx.second, user_data)
+                return ctx.set_res(res)
             return ctx.set_res(State.FAILED)
 
 ############
