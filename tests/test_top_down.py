@@ -474,9 +474,7 @@ class TestTopDown(unittest.TestCase):
                         Sub1([12, 14, 16], a=None, flags='toto')],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        #log_on()
         match = e.match(tree)
-        #log_off()
         # TODO: 3!
         self.assertEqual(len(match), 1, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, 12, "Failed to match a KindOf")
@@ -499,9 +497,7 @@ class TestTopDown(unittest.TestCase):
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        #log_on()
         match = e.match(tree)
-        #log_off()
         #self.assertEqual(len(match), 1, "Failed to match a KindOf")
         #self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
         #self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
@@ -520,9 +516,7 @@ class TestTopDown(unittest.TestCase):
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        #log_on()
         match = e.match(tree)
-        #log_off()
         #self.assertEqual(len(match), 1, "Failed to match a KindOf")
         #self.assertEqual(match[0].capture['a'].flags, 'toto', "Failed to match a KindOf")
         #self.assertIs(type(match[0].capture['a']), Sub1, "Failed to match a KindOf")
@@ -581,10 +575,7 @@ class TestTopDown(unittest.TestCase):
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
 
         tree = [A(), C(), C(z=A(a=B()))]
-        log_on()
         match = e.match(tree, self)
-        log_json(match)
-        log_off()
         self.assertEqual(len(match), 1, "Failed to match a Ancestor")
 
         bt = Hook(hook_test, Capture('a', Ancestor(Type(A), Type(B), 2)))
@@ -637,3 +628,5 @@ class TestTopDown(unittest.TestCase):
         tree = [A(), B(), C()]
         match = e.match(tree, self)
         self.assertEqual(len(match), 1, "Failed to match a Ancestor")
+
+    # TODO: Event, Condition
