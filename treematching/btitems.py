@@ -81,10 +81,10 @@ class Component(BTItem):
                         return ctx.set_res(State.FAILED)
                     log("Match %s" % t.upper())
                     return ctx.set_res(State.SUCCESS)
+                # out directly for Any* 
+                if self.isany:
+                    return ctx.set_res(State.SUCCESS)
                 return ctx.set_res(State.FAILED)
-            # out directly for Any* 
-            if self.isany:
-                return ctx.set_res(State.RUNNING)
             log("check subs")
             # here // match
             ctx.nbrunning = 0
@@ -136,7 +136,6 @@ class Component(BTItem):
             log("COMPONENT %s: [%s: %s]" % (t, data[Pos.TYPE], data[Pos.ARG]))
             # calcul if we could begin
             if t == data[Pos.TYPE]: ##
-                log("YO %s" % self.strict)
                 # strict
                 if self.strict and len(self.subs) != len(data[Pos.ARG]):
                     return ctx.set_res(State.FAILED)
@@ -146,7 +145,6 @@ class Component(BTItem):
                     ctx.nbsuccess = set()
                     log("Match %s" % t.upper())
                     return ctx.set_res(State.RUNNING)
-                log("ISANY %s" % t)
                 return ctx.set_res(State.SUCCESS)
             return ctx.set_res(State.FAILED)
         if ctx.state == 'final':
