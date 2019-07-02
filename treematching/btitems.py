@@ -57,66 +57,8 @@ class Component(BTItem):
         self.subs = subs
         self.strict = strict
         self.isany = isany
-
-#    def do_up_template_old(self, t, data, ctx, user_data):
-#        ctx.init_state(self)
-#        # to be notifying by subs
-#        ctx.matching = False
-#        if not hasattr(ctx, 'nbsuccess'):
-#            ctx.nbsuccess = 0
-#        log("%s %s" % (t.upper(), ctx.state))
-#        if ctx.state == 'enter':
-#            ctx.state = t
-#            ctx.init_subs(self.subs)
-#        if ctx.state == t:
-#            log("COMPONENT %s: [%s]" % (t, data))
-#            # calcul if we have finish
-#            if t == data[Pos.TYPE] and (not hasattr(ctx, 'uid') or data[Pos.UID] == ctx.uid):
-#                log("data[UID]: %s" % data[Pos.UID])
-#                log("LEN: %d ?? %d ?? %d" % (ctx.nbsuccess, len(self.subs), len(data[Pos.ARG])))
-#                if ctx.nbsuccess == len(self.subs):
-#                    # strict
-#                    if self.strict and len(self.subs) != len(data[Pos.ARG]):
-#                        return ctx.set_res(State.FAILED)
-#                    log("Match %s" % t.upper())
-#                    return ctx.set_res(State.SUCCESS)
-#                return ctx.set_res(State.FAILED)
-#            log("check subs")
-#            # here // match
-#            ctx.nbsuccess = 0
-#            ctx.nbrunning = 0
-#            for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
-#                # tick only running BT
-#                if sub_ctx.res == State.RUNNING:
-#                    # deeper function could modify the current ctx.matching
-#                    res = sub_bt.do_up(data, sub_ctx, user_data)
-#                # count after tick
-#                if sub_ctx.res == State.RUNNING:
-#                    ctx.nbrunning += 1
-#                if sub_ctx.res == State.SUCCESS:
-#                    log("SUBS OK")
-#                    # take the first uid as ref
-#                    if not hasattr(ctx, 'uid'):
-#                        ctx.uid = sub_ctx.uid[:-1]
-#                    #must be at the same level
-#                    if ctx.uid != sub_ctx.uid[:-1]:
-#                        log("NOT AT THE LEVEL %s ?? %s" % (ctx.uid, sub_ctx.uid[:-1]))
-#                        sub_ctx.reset_tree()
-#                    else:
-#                        ctx.nbsuccess += 1
-#            # I don't have finish
-#            log("CHECK MATCHING %d: %s & nbsuccess %d & nbrunning %d" % (id(ctx), ctx.matching, ctx.nbsuccess, ctx.nbrunning))
-#            # on a partial match, resync the failed
-#            if ctx.matching or ctx.nbrunning or ctx.nbsuccess:
-#                log("Need TO RESET")
-#                for sub_bt, sub_ctx in zip(self.subs, ctx.subs):
-#                    if sub_ctx.res == State.FAILED:
-#                        log("RESET %d" % id(sub_ctx))
-#                        # reset
-#                        sub_ctx.reset_tree()
-#                return ctx.set_res(State.RUNNING)
-#            log("FAILED TO RESET")
-#            return ctx.set_res(State.FAILED)
+        if self.isany:
+            self.strict = False
 
     def do_up_template(self, t, data, ctx, user_data):
         ctx.init_state(self)
@@ -150,6 +92,7 @@ class Component(BTItem):
                 # tick only running BT
                 if sub_ctx.res == State.RUNNING:
                     # deeper function could modify the current ctx.matching
+                    log("SUBCTX DOUP %d" % id(sub_ctx))
                     res = sub_bt.do_up(data, sub_ctx, user_data)
                 # count after tick
                 if sub_ctx.res == State.RUNNING:
@@ -159,6 +102,8 @@ class Component(BTItem):
                     log("SUBS OK")
                     # take the first uid as ref
                     if not hasattr(ctx, 'uid'):
+                        log("SUBCTX %d" % id(sub_ctx))
+                        log_json(sub_ctx)
                         ctx.uid = sub_ctx.uid[:-1]
                     #must be at the same level of the previous partial match
                     if ctx.uid != sub_ctx.uid[:-1]:
@@ -188,9 +133,10 @@ class Component(BTItem):
             ctx.state = t
             ctx.init_subs(self.subs)
         if ctx.state == t:
-            log("COMPONENT %s: [%s]" % (t, data))
+            log("COMPONENT %s: [%s: %s]" % (t, data[Pos.TYPE], data[Pos.ARG]))
             # calcul if we could begin
             if t == data[Pos.TYPE]: ##
+                log("YO %s" % self.strict)
                 # strict
                 if self.strict and len(self.subs) != len(data[Pos.ARG]):
                     return ctx.set_res(State.FAILED)
@@ -200,6 +146,7 @@ class Component(BTItem):
                     ctx.nbsuccess = set()
                     log("Match %s" % t.upper())
                     return ctx.set_res(State.RUNNING)
+                log("ISANY %s" % t)
                 return ctx.set_res(State.SUCCESS)
             return ctx.set_res(State.FAILED)
         if ctx.state == 'final':
@@ -226,6 +173,7 @@ class Component(BTItem):
                         sub_ctx.reset_tree()
                 return ctx.set_res(State.RUNNING)
             if len(ctx.nbsuccess) == len(self.subs):
+                ctx.uid = data[Pos.UID]
                 return ctx.set_res(State.SUCCESS)
 ############
 
@@ -241,6 +189,7 @@ class Capture(Pair):
             return ctx.set_res(res)
         log("CAPTURE %s" % self.first)
         root.capture[self.first] = data[Pos.ARG]
+        ctx.uid = data[Pos.UID]
         return ctx.set_res(State.SUCCESS)
 
     def do_down(self, data, ctx, user_data) -> State:
@@ -256,6 +205,7 @@ class Capture(Pair):
             log("DOWN CAPTURE SECOND %d" % id(ctx.second))
             res = self.second.do_down(data, ctx.second, user_data)
             log("DOWN CAPTURE RES: %s ID %d" % (res, id(ctx.second)))
+            ctx.uid = data[Pos.UID]
             return ctx.set_res(res)
 
 class Hook(Pair):
@@ -270,6 +220,7 @@ class Hook(Pair):
         ## hook must return if a modification was done in the hook -> fixpoint
         if self.first(root.capture, user_data):
             root.nb_modif += 1
+        ctx.uid = data[Pos.UID]
         return ctx.set_res(State.SUCCESS)
 
     def do_down(self, data, ctx, user_data) -> State:
@@ -287,6 +238,7 @@ class Hook(Pair):
             ## hook must return if a modification was done in the hook -> fixpoint
             if self.first(root.capture, user_data):
                 root.nb_modif += 1
+            ctx.uid = data[Pos.UID]
             return ctx.set_res(State.SUCCESS)
 
 class Event(Pair):
@@ -318,7 +270,6 @@ def AnyDict():
 class Key(Pair):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("KEY %s" % ctx.state)
         if ctx.state == 'enter':
             if self.second:
                 ctx.init_second()
@@ -330,25 +281,20 @@ class Key(Pair):
             return ctx.set_res(State.RUNNING)
         if ctx.state == 'key':
             if 'key' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Key %r" % self.first)
                 ctx.uid = data[Pos.UID] #!!!!
                 return ctx.set_res(State.SUCCESS)
-            log("KEY FAILED")
             return ctx.set_res(State.FAILED)
 
     def do_down(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("KEY %s" % ctx.state)
         if ctx.state == 'enter':
             if 'key' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Key %r" % self.first)
                 ctx.uid = data[Pos.UID] #!!!!
                 ctx.when = data[Pos.ARG]
                 if self.second:
                     ctx.state = 'key'
                     return ctx.set_res(State.RUNNING)
                 return ctx.set_res(State.SUCCESS)
-            log("KEY FAILED")
             return ctx.set_res(State.FAILED)
         if ctx.state == 'key':
             ctx.init_second()
@@ -377,7 +323,6 @@ def AnyList():
 class Idx(Pair):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("IDX %s" % ctx.state)
         if ctx.state == 'enter':
             if self.second:
                 ctx.init_second()
@@ -389,30 +334,31 @@ class Idx(Pair):
             return ctx.set_res(State.RUNNING)
         if ctx.state == 'idx':
             if 'idx' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Idx %r" % self.first)
+                log("IDX===== %d - %s" % (id(ctx), data[Pos.UID]))
                 ctx.uid = data[Pos.UID] #!!!!!!!
+                ctx.when = data[Pos.ARG]
                 return ctx.set_res(State.SUCCESS)
-            log("IDX FAILED")
             return ctx.set_res(State.FAILED)
 
     def do_down(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("IDX %s" % ctx.state)
         if ctx.state == 'enter':
             if 'idx' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Idx %r" % self.first)
                 ctx.uid = data[Pos.UID] #!!!!!!!
                 ctx.when = data[Pos.ARG]
                 if self.second:
                     ctx.state = 'idx'
                     return ctx.set_res(State.RUNNING)
+                ctx.when = data[Pos.ARG]
                 return ctx.set_res(State.SUCCESS)
-            log("IDX FAILED")
             return ctx.set_res(State.FAILED)
         if ctx.state == 'idx':
             ctx.init_second()
             if ctx.second.res != State.SUCCESS:
                 res = self.second.do_down(data, ctx.second, user_data)
+                if res == State.SUCCESS:
+                    ctx.when = data[Pos.ARG]
+                    ctx.uid = data[Pos.UID]
                 return ctx.set_res(res)
             return ctx.set_res(State.FAILED)
 
@@ -449,7 +395,6 @@ class Attrs(Component):
 class Attr(Pair):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("ATTR %s" % ctx.state)
         if ctx.state == 'enter':
             if self.second:
                 ctx.init_second()
@@ -461,20 +406,16 @@ class Attr(Pair):
             return ctx.set_res(State.RUNNING)
         if ctx.state == 'attr':
             if 'attr' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Attr %r" % self.first)
                 ctx.matched = self.first
                 ctx.uid = data[Pos.UID] #!!!!
                 ctx.when = data[Pos.ARG]
                 return ctx.set_res(State.SUCCESS)
-            log("ATTR FAILED")
             return ctx.set_res(State.FAILED)
 
     def do_down(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("ATTR %s" % ctx.state)
         if ctx.state == 'enter':
             if 'attr' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.first):
-                log("Match Attr %r" % self.first)
                 ctx.matched = self.first
                 ctx.uid = data[Pos.UID] #!!!!
                 ctx.when = data[Pos.ARG]
@@ -482,7 +423,6 @@ class Attr(Pair):
                     ctx.state = 'attr'
                     return ctx.set_res(State.RUNNING)
                 return ctx.set_res(State.SUCCESS)
-            log("ATTR FAILED")
             return ctx.set_res(State.FAILED)
         if ctx.state == 'attr':
             ctx.init_second()
@@ -499,26 +439,20 @@ def AnyAttr(expr=None):
 class Value(Expr):
     def do_up(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("VALUE %s" % (ctx.state))
         if ctx.state == 'enter':
             if 'value' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.expr):
-                log("Match Value %r" % self.expr)
                 ctx.uid = data[Pos.UID]
                 ctx.when = data[Pos.ARG]
                 return ctx.set_res(State.SUCCESS)
-            log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
 
     def do_down(self, data, ctx, user_data) -> State:
         ctx.init_state(self)
-        log("VALUE %s" % (ctx.state))
         if ctx.state == 'enter':
             if 'value' == data[Pos.TYPE] and (self.isany or data[Pos.ARG] == self.expr):
-                log("Match Value %r" % self.expr)
                 ctx.uid = data[Pos.UID]
                 ctx.when = data[Pos.ARG]
                 return ctx.set_res(State.SUCCESS)
-            log("VALUE FAILED")
             return ctx.set_res(State.FAILED)
 
 def AnyValue(expr=None):
@@ -526,62 +460,14 @@ def AnyValue(expr=None):
 
 ############
 
-class AnyType(Expr):
-    def do_up(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYTYPE %s" % ctx.state)
-        if ctx.state == 'enter':
-            ctx.uid = data[Pos.UID]
-            if self.expr:
-                ctx.state = 'sub'
-            else:
-                ctx.state = 'final'
-            log("ANYTYPE CHANGE TYPE %s" % ctx.state)
-        if ctx.state == 'sub':
-            ctx.init_second()
-            res = self.expr.do_up(data, ctx.second, user_data)
-            if res != State.SUCCESS:
-                return ctx.set_res(res)
-            ctx.state = 'final'
-            return ctx.set_res(State.RUNNING)
-        if ctx.state == 'final':
-            log("anytype %s" % type(data[Pos.ARG]))
-            if 'type' == data[0]:
-                log("Match AnyType")
-                ctx.uid = data[Pos.UID]
-                ctx.when = type(data[Pos.ARG])
-                return ctx.set_res(State.SUCCESS)
-            log("ANYTYPE FAILED")
-            return ctx.set_res(State.FAILED)
-
-    def do_down(self, data, ctx, user_data) -> State:
-        ctx.init_state(self)
-        log("ANYTYPE %s" % ctx.state)
-        if ctx.state == 'enter':
-            ctx.uid = data[Pos.UID]
-            log("anytype %s" % type(data[Pos.ARG]))
-            if 'type' == data[0]:
-                log("Match AnyType")
-                ctx.uid = data[Pos.UID]
-                ctx.when = type(data[Pos.ARG])
-                if self.expr:
-                    ctx.state = 'sub'
-                    return ctx.set_res(State.RUNNING)
-                return ctx.set_res(State.SUCCESS)
-            log("ANYTYPE FAILED")
-            return ctx.set_res(State.FAILED)
-        if ctx.state == 'sub':
-            ctx.init_second()
-            res = self.expr.do_down(data, ctx.second, user_data)
-            return ctx.set_res(res)
-
-class Type(Pair, AnyType):
+class Type(Pair):
     def __init__(self, *subs, kindof=False, isany=False):
         if len(subs) not in [1, 2, 3, 4]:
             raise TypeError("Type take at least one argument at most four argument")
         self.first = subs[0]
         self.steps = []
         self.kindof = kindof
+        self.isany = isany
         if len(subs) > 1:
             self.steps.append(subs[1])
         if len(subs) > 2:
@@ -664,10 +550,11 @@ class Type(Pair, AnyType):
                 return ctx.set_res(State.RUNNING)
         if ctx.state == 'final':
             log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
-            cmp_type = type(data[Pos.ARG]) is self.first
-            if self.kindof:
-                cmp_type = issubclass(type(data[Pos.ARG]), self.first)
-            if 'type' == data[0] and cmp_type:
+            if not self.isany:
+                cmp_type = type(data[Pos.ARG]) is self.first
+                if self.kindof:
+                    cmp_type = issubclass(type(data[Pos.ARG]), self.first)
+            if 'type' == data[0] and (self.isany or cmp_type):
                 log("Match Type %r" % self.first)
                 ctx.uid = data[Pos.UID]
                 ctx.when = type(data[Pos.ARG]).__name__
@@ -681,10 +568,11 @@ class Type(Pair, AnyType):
         ### Au début
         if ctx.state == 'enter':
             log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
-            cmp_type = type(data[Pos.ARG]) is self.first
-            if self.kindof:
-                cmp_type = issubclass(type(data[Pos.ARG]), self.first)
-            if 'type' == data[0] and cmp_type:
+            if not self.isany:
+                cmp_type = type(data[Pos.ARG]) is self.first
+                if self.kindof:
+                    cmp_type = issubclass(type(data[Pos.ARG]), self.first)
+            if 'type' == data[0] and (self.isany or cmp_type):
                 log("D Match Type %r" % self.first)
                 ctx.uid = data[Pos.UID]
                 ctx.when = type(data[Pos.ARG]).__name__
@@ -743,6 +631,10 @@ class Type(Pair, AnyType):
 def KindOf(*subs):
     res = Type(*subs, kindof=True)
     return res
+
+def AnyType(expr=None):
+    return Type(expr, isany=True)
+
 
 ############
 

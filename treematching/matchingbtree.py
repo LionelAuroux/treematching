@@ -126,41 +126,34 @@ class MatchingBTree:
         self.direction = direction
 
     def do_up(self, data, ctx, user_data) -> State:
-        log("MatchingBTree UP")
         return self.bt.do_up(data, ctx, user_data)
 
     def do_down(self, data, ctx, user_data) -> State:
-        log("MatchingBTree DOWN")
         return self.bt.do_down(data, ctx, user_data)
 
     def match(self, tree, user_data=None):
-        glist = []
+        # store matching result
         match = []
+        # load walking strategie
         walk = walk_bottomup
         do_bt = self.do_up
         if self.direction == MatchDirection.TOP_DOWN:
             walk = walk_topdown
             do_bt = self.do_down
+        # matching context list 
+        mctxlist = []
         for idx, it in enumerate(walk(tree)):
-            log(repr(it))
-            log("LEN // %d" % len(glist))
-            glist.append(MatchContext())
+            mctxlist.append(MatchContext())
+            # delete list of failed btree
             dlist = []
-            # TODO: idx?
-            for idx, g in enumerate(glist):
-                log("MATCH TEST %d" % idx)
-                r = do_bt(it, g, user_data)
-                log("MATCH RES %d %s" % (id(g), repr(r)))
+            for ctx in mctxlist:
+                r = do_bt(it, ctx, user_data)
                 if r == State.FAILED:
-                    log("NOMATCH ADD REMOVE: %d" % idx)
-                    dlist.append(g)
+                    dlist.append(ctx)
                 if r == State.SUCCESS:
-                    log("MATCH ADD REMOVE: %d" % idx)
-                    match.append(g)
-                    dlist.append(g)
+                    match.append(ctx)
+                    dlist.append(ctx)
             for d in dlist:
-                log("DO REMOVE: %d" % id(d))
-                glist.remove(d)
-            log("%s\n" % ('-' * 20))
+                mctxlist.remove(d)
         return match
 ###

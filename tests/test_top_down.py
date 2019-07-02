@@ -51,15 +51,19 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = A(a=32, b='toto', c='lala')
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
+
         tree = [B(a=32, b='toto', c='lala'), A(a=32, b='toto', c='lala')]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
+
         bt = Type(A,
                     Attrs(
                         Attr('a', AnyType(AnyValue())),
@@ -68,12 +72,15 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = A(a=3.2, b=b'toto', c=b'lala')
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
+
         tree = [B(a=32, b='toto', c='lala'), A(a=32, b='toto', c='lala')]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match a basic tree")
@@ -90,18 +97,23 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = A(a=32, b='toto', c='lala')
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = [B(a=32, b='toto', c='lala'), A(a=32, b='toto', c='lala')]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala'))]}
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         # stricly empty
         bt = Type(A)
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A()), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
         # TODO: 1 -> 2
@@ -120,16 +132,20 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(e=32, f='toto', g='lala'), C(v=A(e=32, f='toto', g='lala', a=13)), A(e=32, f='toto', g='lala', d=12, a=15)]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
+
         tree = {A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', a=16))), A()}
         match = e.match(tree)
         # TODO: top/down see only 1
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
+
         # empty
         bt = Capture('a', Type(A))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
@@ -146,12 +162,15 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = AL([32, 'toto', 'lala'])
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = [B(a=32, b='toto', c='lala'), AL([32, 'toto', 'lala'])]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 'lili'])]}
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
@@ -168,12 +187,15 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = AD({'a':32, 'b':'toto', 'c':'lala'})
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = [B(a=32, b='toto', c='lala'), AD({'a':32, 'b':'toto', 'c':'lala'})]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AD({'a': 32, 'b': 'toto', 'c': 'lala'})), AD({'a': 32, 'b': 'toto', 'c': 'lala', 'd': 42})]}
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
@@ -191,20 +213,27 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = AL([32, 'toto', 'lala', 12, 'pouet'])
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict list")
+
         tree = [B(a=32, b='toto', c='lala'), AL([32, 'toto', 'lala', 'lili'])]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict list")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 'lili'])]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict list")
+
         tree = AL([32, 'toto', 'lala', 666, AL([32, 'toto', 'lala', AL([32, 'toto', 'lala'])])])
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict list")
+
         # empty
-        bt = Type(AL, List(AnyIdx(), strict=False))
+        bt = Type(AL, AnyList())
+        e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 'lili'])]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict list")
@@ -222,20 +251,27 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = AD({'a':32, 'b':'toto', 'c':'lala', 'k': 43})
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict dict")
+
         tree = [B(a=32, b='toto', c='lala'), AD({'a':32, 'b':'toto', 'c':'lala', 'g': 12})]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict dict")
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AD({'a': 32, 'b': 'toto', 'c': 'lala'})), AD({'a': 32, 'b': 'toto', 'c': 'lala', 'd': 42})]}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict dict")
+
         tree = AD({'a': 32, 'b': 'toto', 'c': 'lala', 'r': AD({'a': 32, 'b': 'toto', 'c': 'lala', 'r': AD({'a': 32, 'b': 'toto', 'c': 'lala'})})})
         match = e.match(tree)
         self.assertEqual(len(match), 3, "Failed to match an unstrict dict")
+
         # empty
-        bt = Type(AD, Dict(AnyKey(), strict=False))
+        bt = Type(AD, AnyDict())
+        e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), AD({}), C(v=AD({'a': 32, 'b': 'toto', 'c': 'lala'})),
                 AD({'a': 32, 'b': 'toto', 'c': 'lala', 'd': 42})]}
         match = e.match(tree)
@@ -253,11 +289,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(k=32, z='toto', t='lala', d=12)],
             'plum': A(g='lala', z=32, l='toto')
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
+
         bt = Type(A,
                     Attrs(
                         AnyAttr(Type(str, Value('lala'))),
@@ -266,11 +304,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(k=32, z='toto', t='lala', d=12)],
             'plum': A(g='lala', z=32, l='toto')
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
+
         bt = Type(A,
                     Attrs(
                         AnyAttr(Type(str, Value('lala'))),
@@ -280,6 +320,7 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(k=32, z='toto', t='lala', d=12)],
             'plum': A(g='lala', a=32, l='toto', bol='riz')
             }
@@ -298,11 +339,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 12])],
             'plum': AL(['lala', 32, 'toto'])
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
+
         bt = Type(AL,
                     List(
                         AnyIdx(Type(str, Value('lala'))),
@@ -311,11 +354,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'lala', 'toto'])), AL([32, 'toto', 'lala', 12])],
             'plum': AL(['lala', 32, 'toto'])
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
+
         bt = Type(AL,
                     List(
                         AnyIdx(Type(str, Value('lala'))),
@@ -325,6 +370,7 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 12])],
             'plum': AL(['lala', 32, 'toto'])
             }
@@ -343,11 +389,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [BD({'a':32, 'b':'toto', 'c':'lala'}), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})), AD({'x':32, 'y':'toto', 'z':'lala', 'a':12})],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match an unstrict attrs")
+
         bt = Type(AD,
                     Dict(
                         AnyKey(Type(str, Value('lala'))),
@@ -356,11 +404,13 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [BD({'a':32, 'b':'toto', 'c':'lala'}), CD({'v':AD({'a':32, 'b':'lala', 'c':'toto'}), 's': None}), AD({'a':32, 'x':'toto', 'e':'lala', 'l':12})],
             'plum': AD({'f':'lala', 'b':32, 'g':'toto'})
             }
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
+
         bt = Type(AD,
                     Dict(
                         AnyKey(Type(str, Value('lala'))),
@@ -370,6 +420,7 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [
                     BD({'a':32, 'b':'toto', 'c':'lala'}), CD({'v':AD({'a':32, 'b':333, 'c':'lala', 'd':'toto'}), 's': None}),
                     AD({'a':32, 'x':'toto', 'e':'lala', 'l':12})
@@ -385,6 +436,7 @@ class TestTopDown(unittest.TestCase):
         """
         bt = Capture('a', Type(A))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [A(), B(), C()]
         match = e.match(tree)
         self.assertEqual(len(match), 1, "Failed to match and capture")
@@ -392,6 +444,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Capture('a', Value(32))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [A(v=44), B(c=32), C(d=1,e=32)]
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match and capture")
@@ -400,6 +453,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Capture('a', List(AnyIdx(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [AL([44, 46, 47]), BL([12, 18, 23, 32]), CL([1, 32]), 12, 42]
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match and capture")
@@ -408,6 +462,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Capture('a', Attrs(AnyAttr(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [A(a=44, b=46, c=47), B(a=12, b=18, c=23, d=32), C(a=1, b=32), 12, 42]
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match and capture")
@@ -416,6 +471,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Capture('a', Dict(AnyKey(Type(int, Value(32))), strict=False))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'a': AD({'a': 44, 'b': 46, 'c': 47}), 'b': BD({'a': 12, 'b': 18, 'c': 23, 'd': 32}), 'c': CD({'a': 1, 'b': 32}), 'd': 12, 'e': 42}
         match = e.match(tree)
         self.assertEqual(len(match), 2, "Failed to match and capture")
@@ -448,6 +504,7 @@ class TestTopDown(unittest.TestCase):
                     )
             ))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, blim=None, flags=True), 
                         Sub3(flags=12, grim=False), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})), 
                         Sub1([12, 14, 16], flags='toto', a=12)],
@@ -469,6 +526,7 @@ class TestTopDown(unittest.TestCase):
                    )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, a=None, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
                         Sub1([12, 14, 16], a=None, flags='toto')],
@@ -492,6 +550,7 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True, b=13),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
                         Sub1([12, 14, 16], flags='toto', a=12)],
@@ -511,6 +570,7 @@ class TestTopDown(unittest.TestCase):
                     )
             )
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
                         Sub1([12, 14, 16], flags='toto', a=12)],
@@ -531,6 +591,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Hook(hook_test, Capture('a', Type(A)))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [A(), B(), C()]
         match = e.match(tree, user_data=self)
 
@@ -549,6 +610,7 @@ class TestTopDown(unittest.TestCase):
 
         bt = Hook(hook_modif, Capture('a', Type(A, Attrs(AnyAttr(Capture('b', Type(B))), strict=False))))
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
         tree = [A(), B(), C(z=A(a=B(flag=12)))]
         match = e.match(tree, self)
         self.assertEqual(len(match), 1, "Failed to Hook")
@@ -556,6 +618,25 @@ class TestTopDown(unittest.TestCase):
         self.assertEqual(tree[2].z.flag, 12, "Failed to Hook")
         self.assertTrue(isinstance(tree[2].z.a, B), "Failed to Hook")
         self.assertEqual(len(vars(tree[2].z.a)), 0, "Failed to Hook")
+
+        # anyIdx, call once if AnyIdx
+        # TODO
+        bt = Type(AL, List(AnyIdx(), strict=False))
+        e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
+        tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=AL([32, 'toto', 'lala'])), AL([32, 'toto', 'lala', 'lili'])]}
+        match = e.match(tree)
+        self.assertEqual(len(match), 2, "Failed to match an unstrict list")
+
+        # anyKey, call once if AnyKey
+        # TODO
+        bt = Type(AD, Dict(AnyKey(), strict=False))
+        e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
+
+        tree = {'cool': [B(a=32, b='toto', c='lala'), AD({}), C(v=AD({'a': 32, 'b': 'toto', 'c': 'lala'})),
+                AD({'a': 32, 'b': 'toto', 'c': 'lala', 'd': 42})]}
+        match = e.match(tree)
+        self.assertEqual(len(match), 2, "Failed to match an unstrict dict")
 
     def test_14(self):
         """

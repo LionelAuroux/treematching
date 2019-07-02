@@ -44,13 +44,10 @@ class MatchContext:
                 return r
 
     def set_res(self, r):
-        log("SET RES %d TO %s" % (id(self), r))
         self.res = r
         component = self.getcomponent()
-        log("SET RES Match %s in upper component %d" % (r, id(component)))
         if r == State.SUCCESS:
             component.matching = True
-            log("SET!!!! on %d" % id(component))
         return r
 
     def __repr__(self) -> str:
@@ -60,20 +57,17 @@ class MatchContext:
 
     def init_capture(self):
         if not hasattr(self, 'capture'):
-            log("create capture")
             self.capture = {}
             # for searching fixpoint
             self.nb_modif = 0
 
     def init_event(self):
         if not hasattr(self, 'event'):
-            log("create event")
             self.event = set()
             self.to_del_event = set()
 
     def init_state(self, oth):
         if not hasattr(self, 'type'):
-            log("create type")
             self.type = type(oth).__name__
             self.state = 'enter'
 
@@ -82,7 +76,6 @@ class MatchContext:
             mimic first of Pair
         """
         if not hasattr(self, 'first'):
-            log("create first")
             self.first = MatchContext()
             # connect to parent
             self.first.parent = self
@@ -92,7 +85,6 @@ class MatchContext:
             mimic second of Expr/Pair
         """
         if not hasattr(self, 'second'):
-            log("create second")
             self.second = MatchContext()
             # connect to parent
             self.second.parent = self
@@ -104,19 +96,15 @@ class MatchContext:
         # use self.steps....
         if not hasattr(self, 'steps'):
             self.steps = []
-        log("LEN steps %s" % len(btitem.steps))
         if len(btitem.steps) >= 1 and len(self.steps) < 1:
-            log("steps second")
             self.steps.append(MatchContext())
             # connect to parent
             self.steps[0].parent = self
         if len(btitem.steps) >= 2 and len(self.steps) < 2:
-            log("steps third")
             self.steps.append(MatchContext())
             # connect to parent
             self.steps[1].parent = self
         if len(btitem.steps) >= 3 and len(self.steps) < 3:
-            log("steps four")
             self.steps.append(MatchContext())
             # connect to parent
             self.steps[2].parent = self
