@@ -38,6 +38,18 @@ class CD(DummyDict): pass
 class DD(DummyDict): pass
 class ED(DummyDict): pass
 
+class Base:
+    def __repr__(self) -> str:
+        return "%s(%s)" % (type(self).__name__, repr(self.__dict__))
+class Sub1(Base, AL):
+    def __repr__(self) -> str:
+        return "%s(%s, %s)" % (type(self).__name__, list.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
+class Sub2(Base, AD):
+    def __repr__(self) -> str:
+        return "%s(%s, %s)" % (type(self).__name__, dict.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
+class Sub3(Base, Dummy):
+    pass
+
 class TestTopDown(unittest.TestCase):
     def test_01(self):
         """
@@ -111,6 +123,7 @@ class TestTopDown(unittest.TestCase):
         self.assertEqual(len(match), 1, "Failed to match an unordered tree")
 
         # stricly empty
+        # add an empty semantic
         bt = Type(A)
         e = MatchingBTree(bt, direction=MatchDirection.TOP_DOWN)
 
@@ -139,7 +152,7 @@ class TestTopDown(unittest.TestCase):
 
         tree = {A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', d=A(e=32, f='toto', g='lala', a=16))), A()}
         match = e.match(tree)
-        # TODO: top/down see only 1
+        # TODO: top/down see only 1, included!!!
         self.assertEqual(len(match), 1, "Failed to match an unstrict attrs")
 
         # empty
@@ -484,17 +497,6 @@ class TestTopDown(unittest.TestCase):
 
         TODO: Any not super clear
         """
-        class Base:
-            def __repr__(self) -> str:
-                return "%s(%s)" % (type(self).__name__, repr(self.__dict__))
-        class Sub1(Base, AL):
-            def __repr__(self) -> str:
-                return "%s(%s, %s)" % (type(self).__name__, list.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
-        class Sub2(Base, AD):
-            def __repr__(self) -> str:
-                return "%s(%s, %s)" % (type(self).__name__, dict.__repr__(self), ', '.join(["%s=%s" % (k, repr(v)) for k, v in self.__dict__.items()]))
-        class Sub3(Base, Dummy):
-            pass
 
         # when we provide only one Attrs, AnyList or AnyDict must failed
         bt = Capture('a', KindOf(Base,

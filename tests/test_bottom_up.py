@@ -1,3 +1,81 @@
+"""
+Tree rewriting in PEG for left recursion
+
+initial:
+
+list <- list sep1 list
+    / list sep2 list
+    / item
+
+- we detect left recursion (cycle) in an alternative in reverse order!!!
+- create a new rule
+- this new rule contains all following alternatives except first alternative containing left recursion
+- remove on the old rule all following alternatives except first alternative containing left recursion
+
+rewrite step1 as:
+
+list <- list_rewrite1 sep1 list
+list_rewrite1 <- list sep2 list
+            / item
+
+rewrite step2 as:
+
+list <- list_rewrite1 sep1 list
+list_rewrite1 <- list_rewrite2 sep2 list
+list_rewrite2 <- item
+
+order?
+
+list <- list sep1 list 
+    / list sep2 list
+    / list sep3 list
+    / list_rewrite4 sep4 list
+
+list_rewrite4 <- item
+
+and:
+
+list <- list_rewrite4bis sep4 list
+
+# previous put as children
+list_rewrite4bis <- list sep1 list 
+                / list sep2 list
+                / list sep3 list
+                / list_rewrite4
+
+list_rewrite4 <- item
+
+and so:
+
+list <- list_rewrite4bis sep4 list
+
+list_rewrite4bis <- list_rewrite_3 sep3 list
+
+list_rewrite_3 <- list sep1 list
+                / list sep2 list
+                / list_rewrite4
+
+list_rewrite4 <- item
+
+and so on:
+
+list <- list_rewrite4bis sep4 list
+list_rewrite4bis <- list_rewrite3 sep3 list
+list_rewrite3 <- list_rewrite2 sep2 list
+list_rewrite2 <- list sep1 list
+                / list_rewrite4
+list_rewrite4 <- item
+
+and finally:
+
+list <- list_rewrite4bis sep4 list
+list_rewrite4bis <- list_rewrite3 sep3 list
+list_rewrite3 <- list_rewrite2 sep2 list
+list_rewrite2 <- list_rewrite1 sep1 list
+list_rewrite1 <- list_rewrite4
+list_rewrite4 <- item
+"""
+
 import unittest
 
 from treematching.matchingbtree import *
@@ -116,8 +194,7 @@ class TestBottomUp(unittest.TestCase):
 
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A()), A(a=32, b='toto', c='lala', d=12)]}
         match = e.match(tree)
-        # TODO: 1 -> 2
-        self.assertEqual(len(match), 2, "Failed to match an empty strict attrs")
+        self.assertEqual(len(match), 1, "Failed to match an empty strict attrs")
 
     def test_03(self):
         """
@@ -142,7 +219,7 @@ class TestBottomUp(unittest.TestCase):
         self.assertEqual(len(match), 3, "Failed to match an unstrict attrs")
 
         # empty
-        bt = Capture('a', Type(A))
+        bt = Capture('a', Type(A, isanyattrs=True))
         e = MatchingBTree(bt)
 
         tree = {'cool': [B(a=32, b='toto', c='lala'), C(v=A(a=32, b='toto', c='lala')), A(a=32, b='toto', c='lala', d=12)]}
@@ -481,8 +558,6 @@ class TestBottomUp(unittest.TestCase):
     def test_12(self):
         """
         KindOf
-
-        TODO: Any not super clear
         """
         class Base:
             def __repr__(self) -> str:
@@ -510,9 +585,7 @@ class TestBottomUp(unittest.TestCase):
                         Sub1([12, 14, 16], flags='toto', a=12)],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        #log_on()
         match = e.match(tree)
-        #log_off()
         self.assertEqual(len(match), 3, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
         self.assertIs(type(match[0].capture['a']), Sub2, "Failed to match a KindOf")
@@ -522,8 +595,8 @@ class TestBottomUp(unittest.TestCase):
         self.assertIs(type(match[2].capture['a']), Sub1, "Failed to match a KindOf")
 
         bt = Capture('a', KindOf(Base,
-                        #AnyList(),
-                        #AnyDict(),
+                        AnyList(),
+                        AnyDict(),
                         Attrs(
                             Attr('flags', AnyType(AnyValue())),
                             strict=False
@@ -532,14 +605,14 @@ class TestBottomUp(unittest.TestCase):
             )
         e = MatchingBTree(bt)
 
-        tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, a=None, flags=True),
+        tree = {'cool': [Sub2({'a':32, 'b':'toto', 'c':'lala'}, a=1, flags=True),
                         Sub3(flags=12), C(v=AD({'x':32, 'y':'toto', 'z':'lala'})),
-                        Sub1([12, 14, 16], a=None, flags='toto')],
+                        Sub1([12, 14, 16], a=1, flags='toto')],
             'plum': AD({'a':'lala', 'b':32, 'c':'toto'})
             }
-        #log_on()
+        log_on()
         match = e.match(tree)
-        #log_off()
+        log_off()
         # TODO: 3!
         self.assertEqual(len(match), 3, "Failed to match a KindOf")
         self.assertEqual(match[0].capture['a'].flags, True, "Failed to match a KindOf")
@@ -620,7 +693,7 @@ class TestBottomUp(unittest.TestCase):
                 delattr(capture['b'], d)
             return True
 
-        bt = Hook(hook_modif, Capture('a', Type(A, Attrs(AnyAttr(Capture('b', Type(B))), strict=False))))
+        bt = Hook(hook_modif, Capture('a', Type(A, Attrs(AnyAttr(Capture('b', Type(B, isanyattrs=True))), strict=False))))
         e = MatchingBTree(bt)
 
         tree = [A(), B(), C(z=A(a=B(flag=12)))]
@@ -729,3 +802,4 @@ class TestBottomUp(unittest.TestCase):
         self.assertEqual(len(match), 1, "Failed to match a Ancestor")
 
     # TODO: Event, Condition
+

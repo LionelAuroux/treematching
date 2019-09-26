@@ -113,11 +113,11 @@ def walk_bottomup(tree, uid=[(0, 0)]) -> object:
             yield ('attrs', attrs, 4, uid)
     # value
     # only for scalar
-    scalar_type = {int, float, str, bytes, bool}
+    scalar_type = {int, float, str, bytes, bool, type(None)}
     if type(tree) in scalar_type:
         yield ('value', tree, 5, uid)
     # type
-    yield ('type', tree, 6, uid)
+    yield ('type', tree, 6, uid, nchild)
 
 class MatchingBTree:
     def __init__(self, bt, direction=MatchDirection.BOTTOM_UP):

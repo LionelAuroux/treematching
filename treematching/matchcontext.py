@@ -12,10 +12,12 @@ class State(IntEnum):
     SUCCESS = 1
     RUNNING = 2
 
+# TODO: must evolve into a namedtuple
 class Pos(IntEnum):
     TYPE = 0
     ARG = 1
     UID = 3
+    NCHILD = 4 # only for Type
 
 
 class MatchContext:

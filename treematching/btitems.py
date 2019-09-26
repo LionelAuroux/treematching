@@ -2,6 +2,65 @@
     Behavior Tree Items...
 
     All what you need to construct your patterns...
+
+semantics:
+    one:
+        - up/down: match one thing SUCCESS/FAILED
+        - example: Value
+
+    wrap:
+        - down:
+            - step1: match the wrap, if wrap thing RUNNING (step2), else SUCCESS
+            - step2: match the thing SUCCESS/FAILED
+        - up:
+            - step1: match the thing FAILED/RUNNING (step2)
+            - step2: match the wrap, SUCCESS/FAILED
+        - example: Attr, Idx, Key
+
+    component:
+        - down:
+            - step1: match the wrap, strict or not, isany RUNNING/SUCCESS or FAILED
+            - step2: concurrent match:
+                        tick only running BT
+                        count after tick
+                        partial match
+                    reset partial match
+                    Success on all concurrent match
+        - up:
+            - step1: check conccurrent match by depth, success
+            - step2: conccurrent match:
+                        tick only running BT
+                        count after tick
+                        partial match
+                    reset partial match
+        - example: Component, Dict, List, Attrs
+
+    - type:
+        - down:
+            - step1: match the wrap, strict or not, isany RUNNING/SUCCESS or FAILED
+            - step2: sequence (one_of (List/Dict), Attrs)
+        - up:
+            - step1: sequence (one_of (List/Dict), Attrs) 
+            - step2: match the wrap, strict or not, isany 
+        - example: Type, KindOf
+
+
+    think about:
+            guard sequence:
+                remember the depth of the first matched item, check that each item is at the same level
+                for Dict, List, Key, Attrs
+            one_of:
+                match only one of a sequence
+            any:
+                match any (1 or more) of a sequence
+            wrap:
+                match a wrap around something
+            all:
+                match all item of a sequence
+            concurrent:
+                match in // subitems
+
+TODO: let's think of RESETABLE states
 """
 
 from treematching.matchcontext import *
@@ -365,22 +424,6 @@ def AnyIdx(expr=None):
 
 ############
 
-
-# TODO : Need test of AnyAttrs
-
-
-#class AnyAttrs(Component):
-#    def do_up(self, data, ctx, user_data) -> State:
-#        ctx.init_state(self)
-#        log("ANYATTRS %s" % ctx.state)
-#        if ctx.state == 'enter':
-#            if 'attrs' == data[Pos.TYPE]:
-#                log("ANYATTRS SUCCESS ID %d" % (id(ctx)))
-#                ctx.uid = data[Pos.UID]
-#                return ctx.set_res(State.SUCCESS)
-#        # I don't have finish
-#        return ctx.set_res(State.FAILED)
-
 class Attrs(Component):
     def do_up(self, data, ctx, user_data) -> State:
         return self.do_up_template('attrs', data, ctx, user_data)
@@ -459,13 +502,14 @@ def AnyValue(expr=None):
 ############
 
 class Type(Pair):
-    def __init__(self, *subs, kindof=False, isany=False):
+    def __init__(self, *subs, kindof=False, isanytype=False, isanyattrs=False):
         if len(subs) not in [1, 2, 3, 4]:
             raise TypeError("Type take at least one argument at most four argument")
         self.first = subs[0]
         self.steps = []
         self.kindof = kindof
-        self.isany = isany
+        self.isanytype = isanytype
+        self.isanyattrs = isanyattrs
         if len(subs) > 1:
             self.steps.append(subs[1])
         if len(subs) > 2:
@@ -487,13 +531,15 @@ class Type(Pair):
             if self.steps:
                 ctx.state = 'concurrent'
             else:
+                if 'type' == data[Pos.TYPE] and not self.isanyattrs and data[Pos.NCHILD] != 0:
+                    return ctx.set_res(State.FAILED)
                 ctx.state = 'final'
             log("TYPE CHANGE TYPE %s" % ctx.state)
         if ctx.state == 'concurrent':
             # todo: 2,3,4
             log("INIT STEPS")
             ctx.init_steps(self)
-            # each ctx.steps[X].res in set inside the do thru the callee ctx.set_res
+            # each ctx.steps[X].res in set inside the node do thru the callee ctx.set_res
             if len(ctx.steps) == 1:
                 if ctx.steps[0].res != State.SUCCESS:
                     log("TRY FIRST")
@@ -523,19 +569,20 @@ class Type(Pair):
             elif len(ctx.steps) == 3:
                 log("HERE COME STEP3")
                 # concurrent match on the 2 first
-                subls = list(map(lambda _: _.res, ctx.steps))[0:2]
-                log("SUBLS %s" % subls)
-                if subls != [State.SUCCESS, State.FAILED] and subls != [State.FAILED, State.SUCCESS]:
-                    for idx, child in list(enumerate(ctx.steps))[0:2]:
-                        log("PING %d" % idx)
-                        res = self.steps[idx].do_up(data, child, user_data)
-                    subls = list(map(lambda _: _.res, ctx.steps))[0:2]
+                nrun = len(list(filter(lambda _: _.res == State.SUCCESS, ctx.steps[0:2])))
+                log("NRUN %s" % nrun)
+                if nrun != 1:
+                    for idx, child in enumerate(ctx.steps[0:2]):
+                        if child.res != State.SUCCESS:
+                            log("PING %d" % idx)
+                            res = self.steps[idx].do_up(data, child, user_data)
+                    subls = list(map(lambda _: _.res, ctx.steps[0:2]))
                     log("SUBLS2 %s" % subls)
                     if subls == [State.FAILED, State.FAILED]:
                         log("2FAILED")
                         return ctx.set_res(State.FAILED)
                     # still RUNNING if matched or subpart RUNNING
-                    log("1RUNNING")
+                    log("ONE SUCCESS CONTINUE")
                     return ctx.set_res(State.RUNNING)
                 log("STEP3 %s" % ctx.steps[2].res)
                 if ctx.steps[2].res != State.SUCCESS:
@@ -548,11 +595,11 @@ class Type(Pair):
                 return ctx.set_res(State.RUNNING)
         if ctx.state == 'final':
             log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
-            if not self.isany:
+            if not self.isanytype:
                 cmp_type = type(data[Pos.ARG]) is self.first
                 if self.kindof:
                     cmp_type = issubclass(type(data[Pos.ARG]), self.first)
-            if 'type' == data[0] and (self.isany or cmp_type):
+            if 'type' == data[Pos.TYPE] and (self.isanytype or cmp_type):
                 log("Match Type %r" % self.first)
                 ctx.uid = data[Pos.UID]
                 ctx.when = type(data[Pos.ARG]).__name__
@@ -566,11 +613,11 @@ class Type(Pair):
         ### Au début
         if ctx.state == 'enter':
             log("%s ?? %s" % (type(data[Pos.ARG]).__name__, type(self.first).__name__))
-            if not self.isany:
+            if not self.isanytype:
                 cmp_type = type(data[Pos.ARG]) is self.first
                 if self.kindof:
                     cmp_type = issubclass(type(data[Pos.ARG]), self.first)
-            if 'type' == data[0] and (self.isany or cmp_type):
+            if 'type' == data[0] and (self.isanytype or cmp_type):
                 log("D Match Type %r" % self.first)
                 ctx.uid = data[Pos.UID]
                 ctx.when = type(data[Pos.ARG]).__name__
@@ -631,7 +678,7 @@ def KindOf(*subs):
     return res
 
 def AnyType(expr=None):
-    return Type(expr, isany=True)
+    return Type(expr, isanytype=True)
 
 
 ############

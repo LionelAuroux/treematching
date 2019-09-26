@@ -40,3 +40,25 @@ class TestCommon(unittest.TestCase):
         ctx.state = "concurrent"
         bt.do_up(('type', None, None, [0]), ctx, None)
         self.assertEqual(len(ctx.steps), 3, "Failed to correctly initialize steps")
+
+    def test_01(self):
+        """
+        Type walking
+        """
+        bt = MatchingBTree(None)
+        tree = 42
+        ls_event_up = list(walk_bottomup(tree))
+        print(ls_event_up)
+        ls_event_down = list(walk_topdown(tree))
+        print(ls_event_down)
+
+    def test_02(self):
+        """
+        Type walking
+        """
+        bt = MatchingBTree(None)
+        tree = [1, 2, 3, 4]
+        ls_event_up = list(walk_bottomup(tree))
+        print(ls_event_up)
+        ls_event_down = list(walk_topdown(tree))
+        print(ls_event_down)
