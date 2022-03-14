@@ -4,7 +4,7 @@
     Main module that provide a match object...
 """
 
-import collections as c
+from collections import abc as c
 from treematching.matchcontext import *
 from treematching.debug import *
 from enum import IntEnum
