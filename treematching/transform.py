@@ -13,44 +13,37 @@ class ListFun:
             log.info(f"out {id(n)}")
         return n
 
-def apply(fn, node):
-    log.info(f"Apply {node}")
-    match node:
-        case [str() as a, b]:
-            bid = id(b)
-            b = fixpoint(fn, b)
-            if bid == id(b):
-                return node
-            return [a, b]
-        case [str() as a, b, c]:
-            bid = id(b)
-            cid = id(c)
-            b = fixpoint(fn, b)
-            c = fixpoint(fn, c)
-            if bid == id(b) and cid == id(c):
-                return node
-            return [a, b, c]
-        case _ as expr:
-            return node
 
-def compose(fn, node):
+def compose(walk, fn, node):
     log.info(f"compose {node}")
-    #return apply(fn, fn(node)) # top-down
-    return fn(apply(fn, node)) # bottom-up
+    #return walk(fn, fn(node)) # top-down
+    return fn(walk(fn, node)) # bottom-up
 
 
-cache_fixpoint = {}
-def fixpoint(fn, node):
-    global cache_fixpoint
+cache_compose = {}
+def fixpoint(walk, fn, node):
+    global cache_compose
     log.info(f"fixpoint {node}")
     n = node
     while True:
+        iw = id(walk)
         ifn = id(fn)
         inode = id(n)
         log.info(f"(ifn, inode) == {(ifn, inode)}")
-        if (ifn, inode) in cache_fixpoint:
+        if (iw, ifn, inode) in cache_compose:
             log.info(f"end fixpoint {n}")
             return n
         else:
-            n = compose(fn, n)
-            cache_fixpoint[(ifn, inode)] = n
+            n = compose(walk, fn, n)
+            cache_compose[(iw, ifn, inode)] = n
+
+cache_nodes = {}
+def cache_node(*n):
+    global cache_nodes
+    idls = []
+    for it in n:
+        idls.append(id(it))
+    k = tuple(idls)
+    if k not in cache_nodes:
+        cache_nodes[k] = n
+    return cache_nodes[k]
